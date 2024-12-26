@@ -1,4 +1,4 @@
-.PHONY: build install clean list
+.PHONY: build install clean test list
 
 # Define the binary name
 BINARY_NAME=pomodoro
@@ -19,3 +19,7 @@ install: build
 clean:
 	rm -f $(BINARY_NAME)
 
+# Run tests
+test:
+	@echo "Running tests..."
+	go test
