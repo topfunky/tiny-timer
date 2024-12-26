@@ -22,7 +22,7 @@ import (
 const (
 	padding                  = 2
 	maxWidth                 = 80
-	defaultDurationInMinutes = 2
+	defaultDurationInMinutes = 25
 	colorGrey                = "#626262"
 )
 
