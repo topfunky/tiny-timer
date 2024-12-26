@@ -67,7 +67,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateWindowSize(m, msg)
 
 	case tickMsg:
-		return updatePercent(m, msg)
+		return updatePercent(m)
 
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
@@ -108,7 +108,7 @@ func formatDurationAsMMSS(duration int64) string {
 // All event update handlers
 // ---
 
-func updatePercent(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+func updatePercent(m model) (tea.Model, tea.Cmd) {
 	if m.progress.Percent() == 1.0 {
 		return m, tea.Quit
 	}
