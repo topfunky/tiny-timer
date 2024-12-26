@@ -89,7 +89,7 @@ func (m model) View() string {
 
 	pad := strings.Repeat(" ", padding)
 	return "\n" +
-		pad + m.progress.View() + fmt.Sprintf(" %s\n\n", formatDurationAsMMSS(remaining)) +
+		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
 		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
 }
 
