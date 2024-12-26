@@ -19,15 +19,18 @@ import (
 )
 
 const (
-	padding  = 2
-	maxWidth = 80
+	padding                  = 2
+	maxWidth                 = 80
+	defaultDurationInMinutes = 2
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
 
 func main() {
 	m := model{
-		progress: progress.New(progress.WithDefaultGradient()),
+		progress:       progress.New(progress.WithDefaultGradient(), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: defaultDurationInMinutes * 60,
 	}
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
@@ -39,7 +42,9 @@ func main() {
 type tickMsg time.Time
 
 type model struct {
-	progress progress.Model
+	progress       progress.Model
+	startTime      int64
+	targetDuration int64
 }
 
 func (m model) Init() tea.Cmd {
@@ -65,7 +70,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Note that you can also use progress.Model.SetPercent to set the
 		// percentage value explicitly, too.
-		cmd := m.progress.IncrPercent(0.25)
+		elapsed := time.Now().Unix() - m.startTime
+		percentCompleted := float64(elapsed) / float64(m.targetDuration)
+
+		cmd := m.progress.SetPercent(percentCompleted)
 		return m, tea.Batch(tickCmd(), cmd)
 
 	// FrameMsg is sent when the progress bar wants to animate itself
@@ -80,9 +88,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
+
 	pad := strings.Repeat(" ", padding)
 	return "\n" +
-		pad + m.progress.View() + "\n\n" +
+		pad + m.progress.View() + fmt.Sprintf(" %s\n\n", formatDuration(remaining)) +
 		pad + helpStyle("Press any key to quit")
 }
 
@@ -90,4 +100,10 @@ func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second*1, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
+}
+
+func formatDuration(duration int64) string {
+	hours := duration / 60
+	minutes := duration % 60
+	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
