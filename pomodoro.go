@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,15 +23,24 @@ const (
 	padding                  = 2
 	maxWidth                 = 80
 	defaultDurationInMinutes = 2
+	colorGrey                = "#626262"
 )
 
-var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
+var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
 
 func main() {
+	// Read CLI args, or use defaults
+	var targetDurationInMinutes int64 = defaultDurationInMinutes
+	if len(os.Args) > 1 {
+		if arg, err := strconv.ParseInt(os.Args[1], 10, 64); err == nil && arg > 0 {
+			targetDurationInMinutes = arg
+		}
+	}
+
 	m := model{
 		progress:       progress.New(progress.WithDefaultGradient(), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
-		targetDuration: defaultDurationInMinutes * 60,
+		targetDuration: targetDurationInMinutes * 60,
 	}
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
@@ -89,10 +99,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
+	if remaining <= 0 {
+		// When it completes, display the original duration of the timer
+		remaining = m.targetDuration
+	}
 
 	pad := strings.Repeat(" ", padding)
 	return "\n" +
-		pad + m.progress.View() + fmt.Sprintf(" %s\n\n", formatDuration(remaining)) +
+		pad + m.progress.View() + fmt.Sprintf(" %s\n\n", formatDurationAsMMSS(remaining)) +
 		pad + helpStyle("Press any key to quit")
 }
 
@@ -102,7 +116,7 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func formatDuration(duration int64) string {
+func formatDurationAsMMSS(duration int64) string {
 	hours := duration / 60
 	minutes := duration % 60
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
