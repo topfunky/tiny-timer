@@ -5,6 +5,7 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 ## Features
 
 - Animated progress bar
+- Countdown timer
 - Customizable timer duration
 
 ## Installation
@@ -12,15 +13,14 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/pomodoro-cli.git
-cd pomodoro-cli
+git clone https://github.com/topfunky/pomodoro.git
+cd pomodoro
 ```
 
-1. Build the application:
+1. Build and install the application to your `GOPATH/bin`:
 
 ```bash
-go build -o pomodoro
-go install
+make install
 ```
 
 ## Usage
