@@ -1,23 +1,20 @@
 .PHONY: build install clean test list
 
-# Define the binary name
-BINARY_NAME=pomodoro
-
 # Display available tasks
 list:
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
 
 # Build the application
 build:
-	go build -o $(BINARY_NAME)
+	go build
 
 # Install the application
-install: build
+install:
 	go install
 
 # Clean the build
 clean:
-	rm -f $(BINARY_NAME)
+	go clean
 
 # Run tests
 test:
