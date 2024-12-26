@@ -61,25 +61,13 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "r" {
-			// Reset timer
-			m.startTime = time.Now().Unix()
-			cmd := m.progress.SetPercent(0)
-			return m, tea.Batch(tickCmd(), cmd)
-		} else {
-			// Quit if any key is pressed
-			return m, tea.Quit
-		}
+		return updateKey(m, msg)
 
 	case tea.WindowSizeMsg:
-		m.progress.Width = msg.Width - padding*2 - 4
-		if m.progress.Width > maxWidth {
-			m.progress.Width = maxWidth
-		}
-		return m, nil
+		return updateWindowSize(m, msg)
 
 	case tickMsg:
-		return updatePercent(m)
+		return updatePercent(m, msg)
 
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
@@ -117,7 +105,10 @@ func formatDurationAsMMSS(duration int64) string {
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
-func updatePercent(m model) (tea.Model, tea.Cmd) {
+// All event update handlers
+// ---
+
+func updatePercent(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.progress.Percent() == 1.0 {
 		return m, tea.Quit
 	}
@@ -127,4 +118,24 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 
 	cmd := m.progress.SetPercent(percentCompleted)
 	return m, tea.Batch(tickCmd(), cmd)
+}
+
+func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+	m.progress.Width = msg.Width - padding*2 - 4
+	if m.progress.Width > maxWidth {
+		m.progress.Width = maxWidth
+	}
+	return m, nil
+}
+
+func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "r" {
+		// Reset timer
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
+	} else {
+		// Quit if any key is pressed
+		return m, tea.Quit
+	}
 }
