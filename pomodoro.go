@@ -79,15 +79,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
-		if m.progress.Percent() == 1.0 {
-			return m, tea.Quit
-		}
-
-		elapsed := time.Now().Unix() - m.startTime
-		percentCompleted := float64(elapsed) / float64(m.targetDuration)
-
-		cmd := m.progress.SetPercent(percentCompleted)
-		return m, tea.Batch(tickCmd(), cmd)
+		return updatePercent(m)
 
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
@@ -123,4 +115,16 @@ func formatDurationAsMMSS(duration int64) string {
 	hours := duration / 60
 	minutes := duration % 60
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
+}
+
+func updatePercent(m model) (tea.Model, tea.Cmd) {
+	if m.progress.Percent() == 1.0 {
+		return m, tea.Quit
+	}
+
+	elapsed := time.Now().Unix() - m.startTime
+	percentCompleted := float64(elapsed) / float64(m.targetDuration)
+
+	cmd := m.progress.SetPercent(percentCompleted)
+	return m, tea.Batch(tickCmd(), cmd)
 }
