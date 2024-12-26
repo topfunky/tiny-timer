@@ -21,6 +21,8 @@ const (
 	maxWidth                 = 80
 	defaultDurationInMinutes = 25
 	colorGrey                = "#626262"
+	colorCream               = "#fefdbc"
+	colorMontezumaGold       = "#f0c442"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
@@ -35,7 +37,7 @@ func main() {
 	}
 
 	m := model{
-		progress:       progress.New(progress.WithDefaultGradient(), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: targetDurationInMinutes * 60,
 	}
