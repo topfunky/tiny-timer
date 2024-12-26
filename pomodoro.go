@@ -56,10 +56,19 @@ type model struct {
 	targetDuration int64
 }
 
+// Start the event loop
 func (m model) Init() tea.Cmd {
 	return tickCmd()
 }
 
+// Configure the event loop to run
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second*1, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+// Top level event handler that is called each time the screen is updated
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -82,32 +91,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m model) View() string {
-	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
-	if remaining <= 0 {
-		// When it completes, display the original duration of the timer
-		remaining = m.targetDuration
-	}
-
-	pad := strings.Repeat(" ", padding)
-	return "\n" +
-		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
-}
-
-func tickCmd() tea.Cmd {
-	return tea.Tick(time.Second*1, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
-}
-
-func formatDurationAsMMSS(duration int64) string {
-	hours := duration / 60
-	minutes := duration % 60
-	return fmt.Sprintf("%02d:%02d", hours, minutes)
-}
-
-// All event update handlers
+// All individual event update handlers
 // ---
 
 func updatePercent(m model) (tea.Model, tea.Cmd) {
@@ -140,4 +124,25 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Quit if any key is pressed
 		return m, tea.Quit
 	}
+}
+
+// Handler that draws the UI of the application
+func (m model) View() string {
+	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
+	if remaining <= 0 {
+		// When it completes, display the original duration of the timer
+		remaining = m.targetDuration
+	}
+
+	pad := strings.Repeat(" ", padding)
+	return "\n" +
+		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
+		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
+}
+
+// A display helper for formatting the time remaining in the timer
+func formatDurationAsMMSS(duration int64) string {
+	hours := duration / 60
+	minutes := duration % 60
+	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
