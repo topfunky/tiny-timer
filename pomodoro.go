@@ -1,11 +1,8 @@
 package main
 
-// A simple example that shows how to render an animated progress bar. In this
-// example we bump the progress by 25% every two seconds, animating our
-// progress bar to its new target state.
+// A TUI timer displaying a countdown in minutes and seconds.
 //
-// It's also possible to render a progress bar in a more static fashion without
-// transitions. For details on that approach see the progress-static example.
+// Accepts a single command line argument to set the timer duration in minutes.
 
 import (
 	"fmt"
@@ -78,8 +75,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// Note that you can also use progress.Model.SetPercent to set the
-		// percentage value explicitly, too.
 		elapsed := time.Now().Unix() - m.startTime
 		percentCompleted := float64(elapsed) / float64(m.targetDuration)
 
