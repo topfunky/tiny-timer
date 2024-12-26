@@ -61,7 +61,15 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m, tea.Quit
+		if msg.String() == "r" {
+			// Reset timer
+			m.startTime = time.Now().Unix()
+			cmd := m.progress.SetPercent(0)
+			return m, tea.Batch(tickCmd(), cmd)
+		} else {
+			// Quit if any key is pressed
+			return m, tea.Quit
+		}
 
 	case tea.WindowSizeMsg:
 		m.progress.Width = msg.Width - padding*2 - 4
@@ -102,7 +110,7 @@ func (m model) View() string {
 	pad := strings.Repeat(" ", padding)
 	return "\n" +
 		pad + m.progress.View() + fmt.Sprintf(" %s\n\n", formatDurationAsMMSS(remaining)) +
-		pad + helpStyle("Press any key to quit")
+		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
 }
 
 func tickCmd() tea.Cmd {
