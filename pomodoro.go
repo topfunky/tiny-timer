@@ -5,6 +5,7 @@ package main
 // Accepts a single command line argument to set the timer duration in minutes.
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,6 +18,8 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -26,6 +29,7 @@ const (
 	colorGrey                = "#626262"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
+	sqlite_db_file_path      = "/.config/tomato-timer/tomato-timer.db"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
@@ -103,6 +107,11 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 			fmt.Println("Error sending notification:", err)
 		}
 
+		// Save the session to the SQLite DB on completion
+		if err := saveSessionToDB(m.targetDuration, true); err != nil {
+			fmt.Println("Error saving session to DB:", err)
+		}
+
 		return m, tea.Quit
 	}
 
@@ -129,6 +138,12 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(tickCmd(), cmd)
 	} else {
 		// Quit if any key is pressed
+
+		// Save the uncompleted session to the SQLite DB
+		if err := saveSessionToDB(m.targetDuration, false); err != nil {
+			fmt.Println("Error saving session to DB:", err)
+		}
+
 		return m, tea.Quit
 	}
 }
@@ -164,4 +179,37 @@ func sendNotification(title, message string) error {
 	}
 	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s" with title "%s" sound name "Bottle"`, message, title))
 	return cmd.Run()
+}
+
+// Save a record to SQLite DB that represents a working session as counted by the timer
+func saveSessionToDB(duration int64, completed bool) error {
+	dbPath := os.Getenv("HOME") + sqlite_db_file_path
+	if err := os.MkdirAll(os.Getenv("HOME")+"/.config/tomato-timer", os.ModePerm); err != nil {
+		return err
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
+		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
+		"duration" INTEGER,
+		"completed" BOOLEAN
+	);`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return err
+	}
+
+	insertSessionSQL := `INSERT INTO sessions (duration, completed) VALUES (?, ?)`
+	_, err = db.Exec(insertSessionSQL, duration, completed)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
