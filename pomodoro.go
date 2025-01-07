@@ -29,6 +29,7 @@ const (
 	colorGrey                = "#626262"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
+	sqlite_db_file_path      = "/.config/tomato-timer/tomato-timer.db"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
@@ -106,6 +107,11 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 			fmt.Println("Error sending notification:", err)
 		}
 
+		// Save the session to the SQLite DB on completion
+		if err := saveSessionToDB(m.targetDuration, true); err != nil {
+			fmt.Println("Error saving session to DB:", err)
+		}
+
 		return m, tea.Quit
 	}
 
@@ -132,6 +138,12 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(tickCmd(), cmd)
 	} else {
 		// Quit if any key is pressed
+
+		// Save the uncompleted session to the SQLite DB
+		if err := saveSessionToDB(m.targetDuration, false); err != nil {
+			fmt.Println("Error saving session to DB:", err)
+		}
+
 		return m, tea.Quit
 	}
 }
@@ -171,7 +183,7 @@ func sendNotification(title, message string) error {
 
 // Save a record to SQLite DB that represents a working session as counted by the timer
 func saveSessionToDB(duration int64, completed bool) error {
-	dbPath := os.Getenv("HOME") + "/.config/tomato-timer/tomato-timer.db"
+	dbPath := os.Getenv("HOME") + sqlite_db_file_path
 	if err := os.MkdirAll(os.Getenv("HOME")+"/.config/tomato-timer", os.ModePerm); err != nil {
 		return err
 	}
