@@ -7,8 +7,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -96,6 +99,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func updatePercent(m model) (tea.Model, tea.Cmd) {
 	if m.progress.Percent() == 1.0 {
+		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
+			fmt.Println("Error sending notification:", err)
+		}
+
 		return m, tea.Quit
 	}
 
@@ -145,4 +152,16 @@ func formatDurationAsMMSS(duration int64) string {
 	hours := duration / 60
 	minutes := duration % 60
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
+}
+
+// Trigger a macOS notification
+func sendNotification(title, message string) error {
+	if testing.Testing() {
+		return nil
+	}
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s" with title "%s" sound name "Bottle"`, message, title))
+	return cmd.Run()
 }
