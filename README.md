@@ -1,4 +1,4 @@
-# Pomodoro CLI
+# Tomato Timer CLI
 
 A simple command-line application to run a [Pomodoro](https://www.pomodorotechnique.com) timer with an animated progress bar using the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
@@ -13,8 +13,8 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/topfunky/pomodoro.git
-cd pomodoro
+git clone https://github.com/topfunky/tomato-timer.git
+cd tomato-timer
 ```
 
 1. Build and install the application to your `GOPATH/bin`:
@@ -28,13 +28,13 @@ make install
 Run the application with the default duration (25 minutes):
 
 ```bash
-pomodoro
+tomato-timer
 ```
 
 Or specify a custom duration in minutes:
 
 ```bash
-pomodoro 5
+tomato-timer 5
 ```
 
 ## Dependencies
@@ -48,3 +48,5 @@ This project uses the following Go packages:
 ## License
 
 This project is currently private and has no license. It includes sample code from the Bubbles project.
+
+[Pomodoro](https://www.pomodorotechnique.com) is a trademark of Francesco Cirillo. The Pomodoro Technique is a time management method developed by Cirillo in the late 1980s.
