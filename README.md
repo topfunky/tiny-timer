@@ -10,6 +10,15 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap topfunky/tap
+brew install tomato-timer
+```
+
+### From Source
+
 1. Clone the repository:
 
 ```bash
@@ -17,11 +26,15 @@ git clone https://github.com/topfunky/tomato-timer.git
 cd tomato-timer
 ```
 
-1. Build and install the application to your `GOPATH/bin`:
+2. Build and install the application to your `GOPATH/bin`:
 
 ```bash
 make install
 ```
+
+### Download Binary
+
+Download the latest release for your platform from the [releases page](https://github.com/topfunky/tomato-timer/releases).
 
 ## Usage
 
