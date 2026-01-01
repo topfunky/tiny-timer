@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -333,4 +335,136 @@ func TestDateFormatInTableFromDatabase(t *testing.T) {
 	
 	// Verify the format matches expected pattern (e.g., "Wednesday, 7 Jan 26")
 	assert.Regexp(t, `^\w+, \d{1,2} \w+ \d{2}$`, formatted, "Date should match pattern 'DayName, D Mon YY'")
+}
+
+func TestTableHeadersAreLeftAligned(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+
+	// Clean up the temporary database file after the test
+	defer os.Remove(tempDBPath)
+
+	// Create a test session
+	err := saveSessionToDB(1500, true, "Test Task")
+	assert.NoError(t, err)
+
+	// Create a model and trigger table view
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		title:          "Test Task",
+		mode:           timerView,
+	}
+
+	// Simulate pressing 't' to show table
+	sessions, err := getRecentSessions(10)
+	assert.NoError(t, err)
+
+	// Build table (same logic as in updateKey)
+	columns := []table.Column{
+		{Title: "Title", Width: 40},
+		{Title: "Duration", Width: 10},
+		{Title: "Date", Width: 20},
+	}
+
+	rows := []table.Row{}
+	for _, s := range sessions {
+		title := s.title
+		if title == "" {
+			title = "(no title)"
+		}
+		duration := formatDurationAsMMSS(s.duration)
+		datetime := s.datetime
+		if parsedTime, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+			datetime = parsedTime.Format("Monday, 2 Jan 06")
+		}
+		
+		rows = append(rows, table.Row{title, duration, datetime})
+	}
+	
+	fmt.Printf("Number of sessions: %d\n", len(sessions))
+	fmt.Printf("Number of rows: %d\n", len(rows))
+	if len(rows) > 0 {
+		fmt.Printf("First row: %v\n", rows[0])
+	}
+
+	tbl := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(false),
+		table.WithHeight(len(rows)+2), // Add extra height for visibility
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(colorGrey)).
+		BorderBottom(true).
+		Bold(false).
+		Padding(0, 0)
+	s.Cell = s.Cell.
+		Padding(0, 0)
+	tbl.SetStyles(s)
+
+	m.table = tbl
+	m.mode = tableView
+
+	// Get the rendered view
+	view := m.View()
+	
+	// Print the view for debugging
+	fmt.Println("=== TABLE VIEW OUTPUT ===")
+	fmt.Println(view)
+	fmt.Println("=== END TABLE VIEW ===")
+
+	// Check that headers appear in the output
+	assert.Contains(t, view, "Title", "Table should contain 'Title' header")
+	assert.Contains(t, view, "Duration", "Table should contain 'Duration' header")
+	assert.Contains(t, view, "Date", "Table should contain 'Date' header")
+
+	// Find header line and first data line to compare alignment
+	lines := strings.Split(view, "\n")
+	var headerLine string
+	var firstDataLine string
+	var headerLineRaw string
+	var firstDataLineRaw string
+	foundHeader := false
+	
+	for i, line := range lines {
+		// Find the header line (contains all three headers)
+		if !foundHeader && strings.Contains(line, "Title") && strings.Contains(line, "Duration") && strings.Contains(line, "Date") {
+			headerLineRaw = line
+			headerLine = strings.TrimPrefix(line, strings.Repeat(" ", padding))
+			foundHeader = true
+			fmt.Printf("Header line RAW [%d]: '%s'\n", i, headerLineRaw)
+			fmt.Printf("Header line trimmed [%d]: '%s'\n", i, headerLine)
+			continue
+		}
+		
+		// Find the first data line (after border line, non-empty, not help text)
+		if foundHeader && len(strings.TrimSpace(line)) > 0 && !strings.Contains(line, "─") && !strings.Contains(line, "Press any key") {
+			firstDataLineRaw = line
+			firstDataLine = strings.TrimPrefix(line, strings.Repeat(" ", padding))
+			fmt.Printf("First data line RAW [%d]: '%s'\n", i, firstDataLineRaw)
+			fmt.Printf("First data line trimmed [%d]: '%s'\n", i, firstDataLine)
+			break
+		}
+	}
+	
+	assert.NotEmpty(t, headerLine, "Should have found the header line")
+	assert.NotEmpty(t, firstDataLine, "Should have found a data line")
+	
+	// Compare using the RAW lines (with padding included)
+	// This tests if the padding from View() is applied consistently
+	headerTitleStartRaw := strings.Index(headerLineRaw, "Title")
+	dataTitleStartRaw := strings.Index(firstDataLineRaw, "Test Task")
+	
+	fmt.Printf("Header 'Title' starts at column: %d (in raw output)\n", headerTitleStartRaw)
+	fmt.Printf("Data 'Test Task' starts at column: %d (in raw output)\n", dataTitleStartRaw)
+	
+	assert.Equal(t, headerTitleStartRaw, dataTitleStartRaw, 
+		"Header and data should start at the same column in the rendered output. Header starts at %d, Data starts at %d",
+		headerTitleStartRaw, dataTitleStartRaw)
 }

@@ -177,7 +177,7 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Build table
+		// Build table with left-aligned columns
 		columns := []table.Column{
 			{Title: "Title", Width: 40},
 			{Title: "Duration", Width: 10},
@@ -213,7 +213,9 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			BorderForeground(lipgloss.Color(colorGrey)).
 			BorderBottom(true).
 			Bold(false).
-			Align(lipgloss.Left)
+			Padding(0, 0)
+		s.Cell = s.Cell.
+			Padding(0, 0)
 		s.Selected = s.Selected.
 			Foreground(lipgloss.Color(colorCream)).
 			Background(lipgloss.Color(colorGrey)).
@@ -239,8 +241,14 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	if m.mode == tableView {
 		pad := strings.Repeat(" ", padding)
+		// Apply padding to each line of the table
+		tableLines := strings.Split(m.table.View(), "\n")
+		paddedTable := make([]string, len(tableLines))
+		for i, line := range tableLines {
+			paddedTable[i] = pad + line
+		}
 		return "\n" +
-			pad + m.table.View() + "\n\n" +
+			strings.Join(paddedTable, "\n") + "\n\n" +
 			pad + helpStyle("Press any key to return to timer")
 	}
 
