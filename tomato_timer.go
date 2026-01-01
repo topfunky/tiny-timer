@@ -228,12 +228,6 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	} else {
 		// Quit if any key is pressed
-
-		// Save the uncompleted session to the SQLite DB
-		if err := saveSessionToDB(m.targetDuration, false, m.title); err != nil {
-			fmt.Println("Error saving session to DB:", err)
-		}
-
 		return m, tea.Quit
 	}
 }
