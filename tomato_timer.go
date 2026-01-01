@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -63,11 +64,28 @@ func main() {
 
 type tickMsg time.Time
 
+type viewMode int
+
+const (
+	timerView viewMode = iota
+	tableView
+)
+
+type session struct {
+	id        int
+	datetime  string
+	duration  int64
+	completed bool
+	title     string
+}
+
 type model struct {
 	progress       progress.Model
 	startTime      int64
 	targetDuration int64
 	title          string
+	mode           viewMode
+	table          table.Model
 }
 
 // Start the event loop
@@ -138,11 +156,72 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 }
 
 func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle table view mode
+	if m.mode == tableView {
+		// Any key exits table view
+		m.mode = timerView
+		return m, nil
+	}
+
+	// Handle timer view mode
 	if msg.String() == "r" {
 		// Reset timer
 		m.startTime = time.Now().Unix()
 		cmd := m.progress.SetPercent(0)
 		return m, tea.Batch(tickCmd(), cmd)
+	} else if msg.String() == "t" {
+		// Show table view of recent sessions
+		sessions, err := getRecentSessions(10)
+		if err != nil {
+			fmt.Println("Error fetching sessions:", err)
+			return m, nil
+		}
+
+		// Build table
+		columns := []table.Column{
+			{Title: "Title", Width: 40},
+			{Title: "Duration", Width: 10},
+			{Title: "Date", Width: 20},
+		}
+
+		rows := []table.Row{}
+		for _, s := range sessions {
+			title := s.title
+			if title == "" {
+				title = "(no title)"
+			}
+			duration := formatDurationAsMMSS(s.duration)
+			// Parse and format the datetime to be more readable
+			datetime := s.datetime
+			if t, err := time.Parse("2006-01-02 15:04:05", s.datetime); err == nil {
+				datetime = t.Format("Jan 02, 2006 15:04")
+			}
+			
+			rows = append(rows, table.Row{title, duration, datetime})
+		}
+
+		t := table.New(
+			table.WithColumns(columns),
+			table.WithRows(rows),
+			table.WithFocused(false),
+			table.WithHeight(len(rows)),
+		)
+
+		s := table.DefaultStyles()
+		s.Header = s.Header.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color(colorGrey)).
+			BorderBottom(true).
+			Bold(false)
+		s.Selected = s.Selected.
+			Foreground(lipgloss.Color(colorCream)).
+			Background(lipgloss.Color(colorGrey)).
+			Bold(false)
+		t.SetStyles(s)
+
+		m.table = t
+		m.mode = tableView
+		return m, nil
 	} else {
 		// Quit if any key is pressed
 
@@ -157,6 +236,14 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // Handler that draws the UI of the application
 func (m model) View() string {
+	if m.mode == tableView {
+		pad := strings.Repeat(" ", padding)
+		return "\n" +
+			pad + "Recent Sessions\n\n" +
+			pad + m.table.View() + "\n\n" +
+			pad + helpStyle("Press any key to return to timer")
+	}
+
 	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
 	if remaining <= 0 {
 		// When it completes, display the original duration of the timer
@@ -174,7 +261,7 @@ func (m model) View() string {
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
+		pad + helpStyle("Press 'r' to reset timer • Press 't' for recent tasks • Press any other key to quit")
 }
 
 // A display helper for formatting the time remaining in the timer
@@ -228,4 +315,33 @@ func saveSessionToDB(duration int64, completed bool, title string) error {
 	}
 
 	return nil
+}
+
+// Fetch recent sessions from the database
+func getRecentSessions(limit int) ([]session, error) {
+	dbPath := os.Getenv("HOME") + sqlite_db_file_path
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := `SELECT id, datetime, duration, completed, title FROM sessions ORDER BY datetime DESC LIMIT ?`
+	rows, err := db.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []session
+	for rows.Next() {
+		var s session
+		err := rows.Scan(&s.id, &s.datetime, &s.duration, &s.completed, &s.title)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
 }

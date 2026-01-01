@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -200,4 +201,83 @@ func TestDatabaseSchemaHasTitleColumn(t *testing.T) {
 	assert.True(t, columnNames["duration"], "Expected 'duration' column to exist")
 	assert.True(t, columnNames["completed"], "Expected 'completed' column to exist")
 	assert.True(t, columnNames["title"], "Expected 'title' column to exist")
+}
+
+func TestGetRecentSessions(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+
+	// Clean up the temporary database file after the test
+	defer os.Remove(tempDBPath)
+
+	// Create several test sessions
+	sessions := []struct {
+		duration  int64
+		completed bool
+		title     string
+	}{
+		{1500, true, "Task 1"},
+		{900, false, "Task 2"},
+		{1800, true, "Task 3"},
+		{600, true, "Task 4"},
+	}
+
+	for _, s := range sessions {
+		err := saveSessionToDB(s.duration, s.completed, s.title)
+		assert.NoError(t, err)
+	}
+
+	// Fetch recent sessions
+	recentSessions, err := getRecentSessions(10)
+	assert.NoError(t, err)
+	assert.Equal(t, len(sessions), len(recentSessions), "Expected to retrieve all sessions")
+
+	// Verify that all session titles are present
+	titles := make(map[string]bool)
+	for _, s := range recentSessions {
+		titles[s.title] = true
+	}
+	for _, s := range sessions {
+		assert.True(t, titles[s.title], "Expected session with title '%s' to be in results", s.title)
+	}
+}
+
+func TestGetRecentSessionsWithLimit(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+
+	// Clean up the temporary database file after the test
+	defer os.Remove(tempDBPath)
+
+	// Create several test sessions
+	for i := 0; i < 5; i++ {
+		err := saveSessionToDB(1500, true, fmt.Sprintf("Task %d", i))
+		assert.NoError(t, err)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Fetch only 3 most recent sessions
+	recentSessions, err := getRecentSessions(3)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(recentSessions), "Expected to retrieve only 3 sessions")
+}
+
+func TestTableViewMode(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		title:          "Test Task",
+		mode:           timerView,
+	}
+
+	// Verify initial mode is timer view
+	assert.Equal(t, timerView, m.mode)
+
+	// Verify timer view is displayed
+	view := m.View()
+	assert.Contains(t, view, "Press 'r' to reset timer")
+	assert.Contains(t, view, "Press 't' for recent tasks")
 }
