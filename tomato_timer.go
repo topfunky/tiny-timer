@@ -6,6 +6,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,10 +36,14 @@ const (
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
 
 func main() {
-	// Read CLI args, or use defaults
+	// Parse CLI flags
+	titleFlag := flag.String("title", "", "Optional title for the timer session")
+	flag.Parse()
+
+	// Read positional arg for duration, or use default
 	var targetDurationInMinutes int64 = defaultDurationInMinutes
-	if len(os.Args) > 1 {
-		if arg, err := strconv.ParseInt(os.Args[1], 10, 64); err == nil && arg > 0 {
+	if flag.NArg() > 0 {
+		if arg, err := strconv.ParseInt(flag.Arg(0), 10, 64); err == nil && arg > 0 {
 			targetDurationInMinutes = arg
 		}
 	}
@@ -47,6 +52,7 @@ func main() {
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: targetDurationInMinutes * 60,
+		title:          *titleFlag,
 	}
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
@@ -61,6 +67,7 @@ type model struct {
 	progress       progress.Model
 	startTime      int64
 	targetDuration int64
+	title          string
 }
 
 // Start the event loop
@@ -108,7 +115,7 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		}
 
 		// Save the session to the SQLite DB on completion
-		if err := saveSessionToDB(m.targetDuration, true); err != nil {
+		if err := saveSessionToDB(m.targetDuration, true, m.title); err != nil {
 			fmt.Println("Error saving session to DB:", err)
 		}
 
@@ -140,7 +147,7 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Quit if any key is pressed
 
 		// Save the uncompleted session to the SQLite DB
-		if err := saveSessionToDB(m.targetDuration, false); err != nil {
+		if err := saveSessionToDB(m.targetDuration, false, m.title); err != nil {
 			fmt.Println("Error saving session to DB:", err)
 		}
 
@@ -157,7 +164,15 @@ func (m model) View() string {
 	}
 
 	pad := strings.Repeat(" ", padding)
+	
+	// Display title if provided
+	titleLine := ""
+	if m.title != "" {
+		titleLine = pad + m.title + "\n\n"
+	}
+	
 	return "\n" +
+		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
 		pad + helpStyle("Press 'r' to reset timer • Press any other key to quit")
 }
@@ -182,7 +197,7 @@ func sendNotification(title, message string) error {
 }
 
 // Save a record to SQLite DB that represents a working session as counted by the timer
-func saveSessionToDB(duration int64, completed bool) error {
+func saveSessionToDB(duration int64, completed bool, title string) error {
 	dbPath := os.Getenv("HOME") + sqlite_db_file_path
 	if err := os.MkdirAll(os.Getenv("HOME")+"/.config/tomato-timer", os.ModePerm); err != nil {
 		return err
@@ -197,7 +212,8 @@ func saveSessionToDB(duration int64, completed bool) error {
 		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
 		"duration" INTEGER,
-		"completed" BOOLEAN
+		"completed" BOOLEAN,
+		"title" TEXT
 	);`
 
 	_, err = db.Exec(createTableSQL)
@@ -205,8 +221,8 @@ func saveSessionToDB(duration int64, completed bool) error {
 		return err
 	}
 
-	insertSessionSQL := `INSERT INTO sessions (duration, completed) VALUES (?, ?)`
-	_, err = db.Exec(insertSessionSQL, duration, completed)
+	insertSessionSQL := `INSERT INTO sessions (duration, completed, title) VALUES (?, ?, ?)`
+	_, err = db.Exec(insertSessionSQL, duration, completed, title)
 	if err != nil {
 		return err
 	}
