@@ -213,6 +213,7 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			BorderForeground(lipgloss.Color(colorGrey)).
 			BorderBottom(true).
 			Bold(false).
+			Foreground(lipgloss.Color(colorGrey)).
 			Padding(0, 0)
 		s.Cell = s.Cell.
 			Padding(0, 0)
