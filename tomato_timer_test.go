@@ -383,12 +383,6 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 		
 		rows = append(rows, table.Row{title, duration, datetime})
 	}
-	
-	fmt.Printf("Number of sessions: %d\n", len(sessions))
-	fmt.Printf("Number of rows: %d\n", len(rows))
-	if len(rows) > 0 {
-		fmt.Printf("First row: %v\n", rows[0])
-	}
 
 	tbl := table.New(
 		table.WithColumns(columns),
@@ -413,11 +407,6 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 
 	// Get the rendered view
 	view := m.View()
-	
-	// Print the view for debugging
-	fmt.Println("=== TABLE VIEW OUTPUT ===")
-	fmt.Println(view)
-	fmt.Println("=== END TABLE VIEW ===")
 
 	// Check that headers appear in the output
 	assert.Contains(t, view, "Title", "Table should contain 'Title' header")
@@ -426,43 +415,32 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 
 	// Find header line and first data line to compare alignment
 	lines := strings.Split(view, "\n")
-	var headerLine string
-	var firstDataLine string
 	var headerLineRaw string
 	var firstDataLineRaw string
 	foundHeader := false
 	
-	for i, line := range lines {
+	for _, line := range lines {
 		// Find the header line (contains all three headers)
 		if !foundHeader && strings.Contains(line, "Title") && strings.Contains(line, "Duration") && strings.Contains(line, "Date") {
 			headerLineRaw = line
-			headerLine = strings.TrimPrefix(line, strings.Repeat(" ", padding))
 			foundHeader = true
-			fmt.Printf("Header line RAW [%d]: '%s'\n", i, headerLineRaw)
-			fmt.Printf("Header line trimmed [%d]: '%s'\n", i, headerLine)
 			continue
 		}
 		
 		// Find the first data line (after border line, non-empty, not help text)
 		if foundHeader && len(strings.TrimSpace(line)) > 0 && !strings.Contains(line, "─") && !strings.Contains(line, "Press any key") {
 			firstDataLineRaw = line
-			firstDataLine = strings.TrimPrefix(line, strings.Repeat(" ", padding))
-			fmt.Printf("First data line RAW [%d]: '%s'\n", i, firstDataLineRaw)
-			fmt.Printf("First data line trimmed [%d]: '%s'\n", i, firstDataLine)
 			break
 		}
 	}
 	
-	assert.NotEmpty(t, headerLine, "Should have found the header line")
-	assert.NotEmpty(t, firstDataLine, "Should have found a data line")
+	assert.NotEmpty(t, headerLineRaw, "Should have found the header line")
+	assert.NotEmpty(t, firstDataLineRaw, "Should have found a data line")
 	
 	// Compare using the RAW lines (with padding included)
-	// This tests if the padding from View() is applied consistently
+	// Headers and data should start at the same column position
 	headerTitleStartRaw := strings.Index(headerLineRaw, "Title")
 	dataTitleStartRaw := strings.Index(firstDataLineRaw, "Test Task")
-	
-	fmt.Printf("Header 'Title' starts at column: %d (in raw output)\n", headerTitleStartRaw)
-	fmt.Printf("Data 'Test Task' starts at column: %d (in raw output)\n", dataTitleStartRaw)
 	
 	assert.Equal(t, headerTitleStartRaw, dataTitleStartRaw, 
 		"Header and data should start at the same column in the rendered output. Header starts at %d, Data starts at %d",

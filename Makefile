@@ -14,9 +14,9 @@ install:
 
 # Clean the build
 clean:
-	go clean
+	go clean -testcache
 
 # Run tests
 test:
 	@echo "Running tests..."
-	go test
+	go test ./...
