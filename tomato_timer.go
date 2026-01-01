@@ -193,8 +193,8 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			duration := formatDurationAsMMSS(s.duration)
 			// Parse and format the datetime to be more readable
 			datetime := s.datetime
-			if t, err := time.Parse("2006-01-02 15:04:05", s.datetime); err == nil {
-				datetime = t.Format("Jan 02, 2006 15:04")
+			if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+				datetime = t.Format("Monday, 2 Jan 06")
 			}
 			
 			rows = append(rows, table.Row{title, duration, datetime})
@@ -212,7 +212,8 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color(colorGrey)).
 			BorderBottom(true).
-			Bold(false)
+			Bold(false).
+			Align(lipgloss.Left)
 		s.Selected = s.Selected.
 			Foreground(lipgloss.Color(colorCream)).
 			Background(lipgloss.Color(colorGrey)).
@@ -239,7 +240,6 @@ func (m model) View() string {
 	if m.mode == tableView {
 		pad := strings.Repeat(" ", padding)
 		return "\n" +
-			pad + "Recent Sessions\n\n" +
 			pad + m.table.View() + "\n\n" +
 			pad + helpStyle("Press any key to return to timer")
 	}

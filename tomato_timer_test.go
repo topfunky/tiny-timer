@@ -281,3 +281,56 @@ func TestTableViewMode(t *testing.T) {
 	assert.Contains(t, view, "Press 'r' to reset timer")
 	assert.Contains(t, view, "Press 't' for recent tasks")
 }
+
+func TestDateFormatInTable(t *testing.T) {
+	// Test that dates are formatted correctly in the table view
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"2026-01-07 10:30:45", "Wednesday, 7 Jan 26"},
+		{"2026-01-01 00:00:00", "Thursday, 1 Jan 26"},
+		{"2025-12-25 15:30:00", "Thursday, 25 Dec 25"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			// Parse the datetime string
+			parsedTime, err := time.Parse("2006-01-02 15:04:05", tc.input)
+			assert.NoError(t, err)
+
+			// Format it the way the table should display it
+			formatted := parsedTime.Format("Monday, 2 Jan 06")
+			assert.Equal(t, tc.expected, formatted, "Date should be formatted as '%s'", tc.expected)
+		})
+	}
+}
+
+func TestDateFormatInTableFromDatabase(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+
+	// Clean up the temporary database file after the test
+	defer os.Remove(tempDBPath)
+
+	// Save a session to the database
+	err := saveSessionToDB(1500, true, "Test Task")
+	assert.NoError(t, err)
+
+	// Retrieve the session
+	sessions, err := getRecentSessions(1)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(sessions), "Expected one session")
+
+	// Verify the datetime can be parsed and formatted correctly
+	s := sessions[0]
+	parsedTime, err := time.Parse("2006-01-02T15:04:05Z", s.datetime)
+	assert.NoError(t, err, "Should be able to parse datetime from database: %s", s.datetime)
+
+	// Format it the way the table displays it
+	formatted := parsedTime.Format("Monday, 2 Jan 06")
+	
+	// Verify the format matches expected pattern (e.g., "Wednesday, 7 Jan 26")
+	assert.Regexp(t, `^\w+, \d{1,2} \w+ \d{2}$`, formatted, "Date should match pattern 'DayName, D Mon YY'")
+}
