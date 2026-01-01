@@ -32,3 +32,10 @@
 - Use `make` tasks for common operations
 - Check `Makefile` for available commands before creating new workflows
 - Add new tasks to `Makefile` when introducing new workflows
+
+## Documentation
+
+- Append to `JOURNAL.md` when completing significant debugging or feature work
+- Include timestamped entries (date and time as "##" headers)
+- Document the problem, solution, and key implementation details
+- Keep entries concise but informative for future reference
