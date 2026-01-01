@@ -127,7 +127,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // ---
 
 func updatePercent(m model) (tea.Model, tea.Cmd) {
-	if m.progress.Percent() == 1.0 {
+	elapsed := time.Now().Unix() - m.startTime
+	percentCompleted := float64(elapsed) / float64(m.targetDuration)
+
+	// Check for completion based on actual elapsed time
+	if percentCompleted >= 1.0 {
+		// Ensure progress is set to 100% for final display
+		m.progress.SetPercent(1.0)
+		
 		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
 			fmt.Println("Error sending notification:", err)
 		}
@@ -139,9 +146,6 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 
 		return m, tea.Quit
 	}
-
-	elapsed := time.Now().Unix() - m.startTime
-	percentCompleted := float64(elapsed) / float64(m.targetDuration)
 
 	cmd := m.progress.SetPercent(percentCompleted)
 	return m, tea.Batch(tickCmd(), cmd)
@@ -158,9 +162,18 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle table view mode
 	if m.mode == tableView {
-		// Any key exits table view
+		// Allow Ctrl-Z to suspend in table view
+		if msg.Type == tea.KeyCtrlZ {
+			return m, tea.Suspend
+		}
+		// Any other key exits table view
 		m.mode = timerView
 		return m, nil
+	}
+
+	// Allow Ctrl-Z to suspend the process in timer view
+	if msg.Type == tea.KeyCtrlZ {
+		return m, tea.Suspend
 	}
 
 	// Handle timer view mode

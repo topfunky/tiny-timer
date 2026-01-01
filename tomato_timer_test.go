@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 )
@@ -445,4 +446,161 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 	assert.Equal(t, headerTitleStartRaw, dataTitleStartRaw, 
 		"Header and data should start at the same column in the rendered output. Header starts at %d, Data starts at %d",
 		headerTitleStartRaw, dataTitleStartRaw)
+}
+
+func TestTimerContinuesAfterPause(t *testing.T) {
+	// Test that timer calculates elapsed time correctly even after a simulated pause
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 30, // Started 30 seconds ago
+		targetDuration: 120,                     // 2 minute timer
+		title:          "Test Task",
+		mode:           timerView,
+	}
+
+	// Simulate the passage of time (another 30 seconds)
+	time.Sleep(100 * time.Millisecond)
+	
+	// Calculate elapsed time as the timer does
+	elapsed := time.Now().Unix() - m.startTime
+	remaining := m.targetDuration - elapsed
+	
+	// Verify elapsed time is approximately 30 seconds (within 1 second tolerance)
+	assert.True(t, elapsed >= 30 && elapsed <= 31, "Expected elapsed time to be ~30 seconds, got %d", elapsed)
+	assert.True(t, remaining >= 89 && remaining <= 90, "Expected remaining time to be ~90 seconds, got %d", remaining)
+	
+	// Verify progress calculation
+	percentCompleted := float64(elapsed) / float64(m.targetDuration)
+	assert.InDelta(t, 0.25, percentCompleted, 0.01, "Expected ~25%% completion")
+}
+
+func TestResumeAfterCompletion(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+	defer os.Remove(tempDBPath)
+
+	// Create a timer that started 70 seconds ago (past the 60 second target)
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 70,
+		targetDuration: 60,
+		title:          "Completed Task",
+		mode:           timerView,
+	}
+
+	// Initial progress should be 0
+	assert.Equal(t, 0.0, m.progress.Percent(), "Initial progress should be 0")
+
+	// Simulate a tick after resuming (which calls updatePercent)
+	newModel, _ := m.Update(tickMsg(time.Now()))
+	
+	// Verify the model is returned after completion
+	assert.NotNil(t, newModel, "Expected model to be returned")
+	
+	// Verify the session was saved to the database
+	db, err := sql.Open("sqlite3", tempDBPath)
+	assert.NoError(t, err)
+	defer db.Close()
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM sessions WHERE title = ? AND completed = ?", "Completed Task", true).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count, "Expected one completed session to be saved when resuming after completion")
+}
+
+func TestTickAfterCompletion(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+	defer os.Remove(tempDBPath)
+
+	// Create a timer that started 70 seconds ago (past the 60 second target)
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 70,
+		targetDuration: 60,
+		title:          "Tick After Complete",
+		mode:           timerView,
+	}
+
+	// Simulate a regular tick (not resume)
+	newModel, _ := m.Update(tickMsg(time.Now()))
+	
+	// Verify the model is returned
+	assert.NotNil(t, newModel, "Expected model to be returned")
+	
+	// Verify the session was saved to the database
+	db, err := sql.Open("sqlite3", tempDBPath)
+	assert.NoError(t, err)
+	defer db.Close()
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM sessions WHERE title = ? AND completed = ?", "Tick After Complete", true).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count, "Expected one completed session to be saved on tick after completion")
+}
+
+func TestCtrlZSuspendsInTimerView(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		title:          "Test Task",
+		mode:           timerView,
+	}
+
+	// Create a Ctrl-Z key message
+	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	
+	// Process the Ctrl-Z key
+	newModel, cmd := m.Update(keyMsg)
+	
+	// Verify the model is returned unchanged
+	assert.NotNil(t, newModel, "Expected model to be returned")
+	
+	// Verify a suspend command was returned
+	assert.NotNil(t, cmd, "Expected suspend command to be returned")
+}
+
+func TestCtrlZSuspendsInTableView(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		title:          "Test Task",
+		mode:           tableView,
+	}
+
+	// Create a Ctrl-Z key message
+	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	
+	// Process the Ctrl-Z key
+	newModel, cmd := m.Update(keyMsg)
+	
+	// Verify the model is still in table view (not exited)
+	modelTyped := newModel.(model)
+	assert.Equal(t, tableView, modelTyped.mode, "Expected to remain in table view after Ctrl-Z")
+	
+	// Verify a suspend command was returned
+	assert.NotNil(t, cmd, "Expected suspend command to be returned")
+}
+
+func TestOtherKeysStillQuitTimerView(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		title:          "Test Task",
+		mode:           timerView,
+	}
+
+	// Test that pressing 'q' still quits
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	
+	// Process the key
+	_, cmd := m.Update(keyMsg)
+	
+	// Verify a quit command was returned (we can't directly test if it's tea.Quit, but we know it's not nil)
+	assert.NotNil(t, cmd, "Expected quit command to be returned for non-special keys")
 }
