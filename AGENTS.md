@@ -12,7 +12,7 @@
 
 ## Version Control
 
-- Use `jj` (Jujutsu) for version control
+- **ALWAYS use `jj` (Jujutsu) for version control - NEVER use `git` commands**
 - Make atomic commits with `jj commit`
 - Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
   - `feat:` for new features
@@ -21,6 +21,31 @@
   - `test:` for adding or updating tests
   - `docs:` for documentation changes
   - `chore:` for maintenance tasks
+
+### Committing Changes
+
+**Minimize command overhead when committing:**
+
+1. **Review changes**: Run `jj show` to see current changes
+2. **Commit atomically**: Run `jj commit -m "message"` to commit
+3. **Done**: Do NOT run follow-up commands to verify success unless `jj commit` returns an error
+
+**Example workflow:**
+```bash
+# Review what changed
+jj show
+
+# Commit with descriptive message
+jj commit -m "fix: initialize database on launch to handle empty state"
+
+# That's it! No need for jj status, jj log, or other verification commands
+```
+
+**Important:**
+- `jj commit` is atomic and will report errors if it fails
+- Trust the command - if it succeeds, the commit is complete
+- Only investigate further if you see an error message
+- Avoid unnecessary `jj status` or `jj log` calls after successful commits
 
 ## Essential Commands
 
