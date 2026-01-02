@@ -49,9 +49,9 @@ func (m model) View() string {
 
 	var helpText string
 	if m.countUpMode {
-		helpText = "Press 'd' to log task • 'D' to change title • 'r' to reset • 't' for history"
+		helpText = "'d' log task • 'D' change title • 'r' reset • 't' history"
 	} else {
-		helpText = "Press 'D' to set title • 'r' to reset • 't' for history • any other key to quit"
+		helpText = "'D' set title • 'r' reset • 't' history • any other key to quit"
 	}
 
 	return "\n" +
