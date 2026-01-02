@@ -15,6 +15,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// setupTestDB sets up a temporary database for testing and returns the cleanup function
+func setupTestDB(t *testing.T) (string, func()) {
+	// Set HOME to temp directory for testing
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", os.TempDir())
+	
+	// Get the database path (will use temp HOME)
+	dbPath, err := getDBPath()
+	if err != nil {
+		t.Fatalf("Failed to get DB path: %v", err)
+	}
+	
+	// Cleanup function
+	cleanup := func() {
+		os.Remove(dbPath)
+		os.Setenv("HOME", originalHome)
+	}
+	
+	return dbPath, cleanup
+}
+
 func TestFormatDurationAsMMSS(t *testing.T) {
 	tests := []struct {
 		duration int64
@@ -35,11 +56,8 @@ func TestFormatDurationAsMMSS(t *testing.T) {
 
 func TestSaveSessionToDB(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Test data.
 	// Assumes that each tuple of (duration, completed, title) is unique.
@@ -71,11 +89,8 @@ func TestSaveSessionToDB(t *testing.T) {
 
 func TestSaveSessionToDBWithTitle(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Test with a specific title
 	title := "Important Work Session"
@@ -98,11 +113,8 @@ func TestSaveSessionToDBWithTitle(t *testing.T) {
 
 func TestSaveSessionToDBWithoutTitle(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Test without title (empty string)
 	duration := int64(900)
@@ -165,11 +177,8 @@ func TestViewWithoutTitle(t *testing.T) {
 
 func TestDatabaseSchemaHasTitleColumn(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create a session to initialize the database
 	err := saveSessionToDB(60, true, "Test")
@@ -208,11 +217,8 @@ func TestDatabaseSchemaHasTitleColumn(t *testing.T) {
 
 func TestGetRecentSessions(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create several test sessions
 	sessions := []struct {
@@ -248,11 +254,8 @@ func TestGetRecentSessions(t *testing.T) {
 
 func TestGetRecentSessionsWithLimit(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create several test sessions
 	for i := 0; i < 5; i++ {
@@ -311,11 +314,8 @@ func TestDateFormatInTable(t *testing.T) {
 
 func TestDateFormatInTableFromDatabase(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Save a session to the database
 	err := saveSessionToDB(1500, true, "Test Task")
@@ -340,11 +340,8 @@ func TestDateFormatInTableFromDatabase(t *testing.T) {
 
 func TestTableHeadersAreLeftAligned(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-
-	// Clean up the temporary database file after the test
-	defer os.Remove(tempDBPath)
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create a test session
 	err := saveSessionToDB(1500, true, "Test Task")
@@ -476,9 +473,8 @@ func TestTimerContinuesAfterPause(t *testing.T) {
 
 func TestResumeAfterCompletion(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create a timer that started 70 seconds ago (past the 60 second target)
 	m := model{
@@ -511,9 +507,8 @@ func TestResumeAfterCompletion(t *testing.T) {
 
 func TestTickAfterCompletion(t *testing.T) {
 	// Set up a temporary database path
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Create a timer that started 70 seconds ago (past the 60 second target)
 	m := model{
@@ -683,9 +678,8 @@ func TestCountUpModePromptInput(t *testing.T) {
 }
 
 func TestCountUpModePromptLogAndReset(t *testing.T) {
-	tempDBPath := os.TempDir() + sqliteDBFilePath
-	os.Setenv("HOME", os.TempDir())
-	defer os.Remove(tempDBPath)
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	startTime := time.Now().Unix() - 120
 	m := model{

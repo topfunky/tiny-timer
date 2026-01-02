@@ -15,7 +15,6 @@ const (
 	colorLightGrey           = "#a0a0a0"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
-	sqliteDBFilePath         = "/.config/tomato-timer/tomato-timer.db"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render

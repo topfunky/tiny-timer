@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -10,10 +11,23 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// getDBPath returns the full path to the SQLite database file
+func getDBPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
+}
+
 // Save a record to SQLite DB that represents a working session as counted by the timer
 func saveSessionToDB(duration int64, completed bool, title string) error {
-	dbPath := os.Getenv("HOME") + sqliteDBFilePath
-	if err := os.MkdirAll(os.Getenv("HOME")+"/.config/tomato-timer", os.ModePerm); err != nil {
+	dbPath, err := getDBPath()
+	if err != nil {
+		return err
+	}
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
 		return err
 	}
 	db, err := sql.Open("sqlite3", dbPath)
@@ -46,7 +60,10 @@ func saveSessionToDB(duration int64, completed bool, title string) error {
 
 // Fetch recent sessions from the database
 func getRecentSessions(limit int) ([]session, error) {
-	dbPath := os.Getenv("HOME") + sqliteDBFilePath
+	dbPath, err := getDBPath()
+	if err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err

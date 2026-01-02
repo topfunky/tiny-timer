@@ -1,5 +1,70 @@
 # Development Journal
 
+## 2026-01-02 15:45 - Fixed Database Path Resolution for Cross-Platform Compatibility
+
+### Problem
+
+The database path was constructed using `os.Getenv("HOME")` which had several issues:
+1. Could return an empty string if `$HOME` environment variable is not set
+2. Not cross-platform (doesn't work properly on Windows)
+3. No error handling if home directory can't be determined
+4. Would silently create invalid paths like `/.config/tomato-timer/tomato-timer.db` (in root directory)
+
+### The Fix
+
+Replaced `os.Getenv("HOME")` with Go's standard `os.UserHomeDir()` function, which:
+- Returns a proper error if the home directory can't be determined
+- Works cross-platform (Linux, macOS, Windows, Plan 9)
+- Uses platform-specific methods to find the home directory
+- Follows Go best practices
+
+### Implementation Details
+
+**1. Created `getDBPath()` helper function:**
+```go
+func getDBPath() (string, error) {
+    homeDir, err := os.UserHomeDir()
+    if err != nil {
+        return "", err
+    }
+    return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
+}
+```
+
+**2. Updated database functions:**
+- `saveSessionToDB()` now calls `getDBPath()` and handles errors properly
+- `getRecentSessions()` now calls `getDBPath()` and handles errors properly
+- Used `filepath.Join()` for cross-platform path construction
+- Used `filepath.Dir()` to get the directory for `MkdirAll()`
+
+**3. Cleaned up constants:**
+- Removed obsolete `sqliteDBFilePath` constant from `constants.go`
+- Centralized path logic in the `getDBPath()` function
+
+**4. Updated test infrastructure:**
+- Created `setupTestDB()` helper function for consistent test database setup
+- Updated all 10 database-related tests to use the new helper
+- Tests properly restore original `$HOME` after completion
+
+### Benefits
+
+- **More robust**: Proper error handling when home directory can't be determined
+- **Cross-platform**: Works on Windows (`%USERPROFILE%`), macOS/Linux (`$HOME`), and Plan 9 (`$home`)
+- **Cleaner code**: Centralized database path logic in one function
+- **Better testing**: Simplified test setup with reusable helper function
+- **Follows Go best practices**: Uses standard library functions designed for this purpose
+
+### Testing
+
+All 28 tests pass successfully:
+- Database save/retrieve operations
+- Schema validation
+- Table view rendering
+- Timer functionality
+- Count-up mode features
+
+Build succeeds with no errors or warnings.
+
 ## 2026-01-07 14:30 - Code Refactoring: Split Monolithic File into Separate Modules
 
 ### Overview
