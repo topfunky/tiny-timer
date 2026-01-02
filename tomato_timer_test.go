@@ -132,7 +132,7 @@ func TestViewWithTitle(t *testing.T) {
 	}
 
 	view := m.View()
-	
+
 	// Verify that the title is displayed in the view
 	assert.Contains(t, view, "Test Task", "Expected view to contain the title")
 }
@@ -147,10 +147,10 @@ func TestViewWithoutTitle(t *testing.T) {
 	}
 
 	view := m.View()
-	
+
 	// Count the number of lines - should have one fewer line when no title is present
 	lines := strings.Split(view, "\n")
-	
+
 	// Verify that empty title doesn't add extra newlines
 	// The view should not have a title line
 	for _, line := range lines {
@@ -281,8 +281,8 @@ func TestTableViewMode(t *testing.T) {
 
 	// Verify timer view is displayed
 	view := m.View()
-	assert.Contains(t, view, "Press 'r' to reset timer")
-	assert.Contains(t, view, "Press 't' for recent tasks")
+	assert.Contains(t, view, "Press 'D' to set title")
+	assert.Contains(t, view, "'t' for history")
 }
 
 func TestDateFormatInTable(t *testing.T) {
@@ -333,7 +333,7 @@ func TestDateFormatInTableFromDatabase(t *testing.T) {
 
 	// Format it the way the table displays it
 	formatted := parsedTime.Format("Monday, 2 Jan 06")
-	
+
 	// Verify the format matches expected pattern (e.g., "Wednesday, 7 Jan 26")
 	assert.Regexp(t, `^\w+, \d{1,2} \w+ \d{2}$`, formatted, "Date should match pattern 'DayName, D Mon YY'")
 }
@@ -381,7 +381,7 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 		if parsedTime, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
 			datetime = parsedTime.Format("Monday, 2 Jan 06")
 		}
-		
+
 		rows = append(rows, table.Row{title, duration, datetime})
 	}
 
@@ -419,7 +419,7 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 	var headerLineRaw string
 	var firstDataLineRaw string
 	foundHeader := false
-	
+
 	for _, line := range lines {
 		// Find the header line (contains all three headers)
 		if !foundHeader && strings.Contains(line, "Title") && strings.Contains(line, "Duration") && strings.Contains(line, "Date") {
@@ -427,23 +427,23 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 			foundHeader = true
 			continue
 		}
-		
+
 		// Find the first data line (after border line, non-empty, not help text)
 		if foundHeader && len(strings.TrimSpace(line)) > 0 && !strings.Contains(line, "─") && !strings.Contains(line, "Press any key") {
 			firstDataLineRaw = line
 			break
 		}
 	}
-	
+
 	assert.NotEmpty(t, headerLineRaw, "Should have found the header line")
 	assert.NotEmpty(t, firstDataLineRaw, "Should have found a data line")
-	
+
 	// Compare using the RAW lines (with padding included)
 	// Headers and data should start at the same column position
 	headerTitleStartRaw := strings.Index(headerLineRaw, "Title")
 	dataTitleStartRaw := strings.Index(firstDataLineRaw, "Test Task")
-	
-	assert.Equal(t, headerTitleStartRaw, dataTitleStartRaw, 
+
+	assert.Equal(t, headerTitleStartRaw, dataTitleStartRaw,
 		"Header and data should start at the same column in the rendered output. Header starts at %d, Data starts at %d",
 		headerTitleStartRaw, dataTitleStartRaw)
 }
@@ -453,22 +453,22 @@ func TestTimerContinuesAfterPause(t *testing.T) {
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 30, // Started 30 seconds ago
-		targetDuration: 120,                     // 2 minute timer
+		targetDuration: 120,                    // 2 minute timer
 		title:          "Test Task",
 		mode:           timerView,
 	}
 
 	// Simulate the passage of time (another 30 seconds)
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Calculate elapsed time as the timer does
 	elapsed := time.Now().Unix() - m.startTime
 	remaining := m.targetDuration - elapsed
-	
+
 	// Verify elapsed time is approximately 30 seconds (within 1 second tolerance)
 	assert.True(t, elapsed >= 30 && elapsed <= 31, "Expected elapsed time to be ~30 seconds, got %d", elapsed)
 	assert.True(t, remaining >= 89 && remaining <= 90, "Expected remaining time to be ~90 seconds, got %d", remaining)
-	
+
 	// Verify progress calculation
 	percentCompleted := float64(elapsed) / float64(m.targetDuration)
 	assert.InDelta(t, 0.25, percentCompleted, 0.01, "Expected ~25%% completion")
@@ -494,10 +494,10 @@ func TestResumeAfterCompletion(t *testing.T) {
 
 	// Simulate a tick after resuming (which calls updatePercent)
 	newModel, _ := m.Update(tickMsg(time.Now()))
-	
+
 	// Verify the model is returned after completion
 	assert.NotNil(t, newModel, "Expected model to be returned")
-	
+
 	// Verify the session was saved to the database
 	db, err := sql.Open("sqlite3", tempDBPath)
 	assert.NoError(t, err)
@@ -526,10 +526,10 @@ func TestTickAfterCompletion(t *testing.T) {
 
 	// Simulate a regular tick (not resume)
 	newModel, _ := m.Update(tickMsg(time.Now()))
-	
+
 	// Verify the model is returned
 	assert.NotNil(t, newModel, "Expected model to be returned")
-	
+
 	// Verify the session was saved to the database
 	db, err := sql.Open("sqlite3", tempDBPath)
 	assert.NoError(t, err)
@@ -552,13 +552,13 @@ func TestCtrlZSuspendsInTimerView(t *testing.T) {
 
 	// Create a Ctrl-Z key message
 	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
-	
+
 	// Process the Ctrl-Z key
 	newModel, cmd := m.Update(keyMsg)
-	
+
 	// Verify the model is returned unchanged
 	assert.NotNil(t, newModel, "Expected model to be returned")
-	
+
 	// Verify a suspend command was returned
 	assert.NotNil(t, cmd, "Expected suspend command to be returned")
 }
@@ -574,14 +574,14 @@ func TestCtrlZSuspendsInTableView(t *testing.T) {
 
 	// Create a Ctrl-Z key message
 	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
-	
+
 	// Process the Ctrl-Z key
 	newModel, cmd := m.Update(keyMsg)
-	
+
 	// Verify the model is still in table view (not exited)
 	modelTyped := newModel.(model)
 	assert.Equal(t, tableView, modelTyped.mode, "Expected to remain in table view after Ctrl-Z")
-	
+
 	// Verify a suspend command was returned
 	assert.NotNil(t, cmd, "Expected suspend command to be returned")
 }
@@ -597,10 +597,10 @@ func TestOtherKeysStillQuitTimerView(t *testing.T) {
 
 	// Test that pressing 'q' still quits
 	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
-	
+
 	// Process the key
 	_, cmd := m.Update(keyMsg)
-	
+
 	// Verify a quit command was returned (we can't directly test if it's tea.Quit, but we know it's not nil)
 	assert.NotNil(t, cmd, "Expected quit command to be returned for non-special keys")
 }
@@ -787,4 +787,32 @@ func TestCountUpViewDisplay(t *testing.T) {
 	assert.Contains(t, view, "My Task", "Expected title to be displayed")
 	assert.Contains(t, view, "'d' to log task", "Expected count-up mode help text")
 	assert.Contains(t, view, "'D' to change title", "Expected title change help text")
+}
+
+func TestNormalModeSetTitle(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 1500,
+		countUpMode:    false,
+		mode:           timerView,
+		title:          "Old Title",
+	}
+
+	// Press 'd' to activate prompt
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}}
+	newModel, _ := m.Update(keyMsg)
+	modelTyped := newModel.(model)
+
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 'D' in normal mode")
+	assert.Equal(t, 1, modelTyped.promptType, "Expected promptType to be 1 (title only) in normal mode")
+	assert.Equal(t, "Old Title", modelTyped.inputBuffer, "Expected input buffer to pre-fill with current title")
+
+	// Simulate typing new title
+	modelTyped.inputBuffer = "New Title"
+	newModel, _ = modelTyped.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	modelTyped = newModel.(model)
+
+	assert.Equal(t, "New Title", modelTyped.title, "Expected title to be updated")
+	assert.False(t, modelTyped.promptActive, "Expected prompt to be inactive after Enter")
 }

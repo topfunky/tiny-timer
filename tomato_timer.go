@@ -73,8 +73,8 @@ func main() {
 type tickMsg time.Time
 
 type promptMsg struct {
-	title  string
-	logDB  bool
+	title string
+	logDB bool
 }
 
 type viewMode int
@@ -148,7 +148,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func updatePercent(m model) (tea.Model, tea.Cmd) {
 	elapsed := time.Now().Unix() - m.startTime
-	
+
 	if m.countUpMode {
 		// In count-up mode, just update the progress bar to show elapsed time
 		percentCompleted := float64(elapsed) / float64(m.targetDuration)
@@ -158,14 +158,14 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		cmd := m.progress.SetPercent(percentCompleted)
 		return m, tea.Batch(tickCmd(), cmd)
 	}
-	
+
 	percentCompleted := float64(elapsed) / float64(m.targetDuration)
 
 	// Check for completion based on actual elapsed time
 	if percentCompleted >= 1.0 {
 		// Ensure progress is set to 100% for final display
 		m.progress.SetPercent(1.0)
-		
+
 		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
 			fmt.Println("Error sending notification:", err)
 		}
@@ -192,7 +192,7 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	m.promptActive = false
-	
+
 	if m.promptType == 0 {
 		// Log session to DB and start new count
 		elapsed := time.Now().Unix() - m.startTime
@@ -331,7 +331,13 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle timer view mode (non count-up)
-	if msg.String() == "r" {
+	if msg.String() == "D" {
+		// Prompt for title only
+		m.promptActive = true
+		m.promptType = 1
+		m.inputBuffer = m.title
+		return m, nil
+	} else if msg.String() == "r" {
 		// Reset timer
 		m.startTime = time.Now().Unix()
 		cmd := m.progress.SetPercent(0)
@@ -363,7 +369,7 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
 				datetime = t.Format("Monday, 2 Jan 06")
 			}
-			
+
 			rows = append(rows, table.Row{title, duration, datetime})
 		}
 
@@ -433,20 +439,20 @@ func (m model) View() string {
 	}
 
 	pad := strings.Repeat(" ", padding)
-	
+
 	// Display title if provided
 	titleLine := ""
 	if m.title != "" {
 		titleLine = pad + m.title + "\n\n"
 	}
-	
+
 	var helpText string
 	if m.countUpMode {
 		helpText = "Press 'd' to log task • 'D' to change title • 'r' to reset • 't' for history"
 	} else {
-		helpText = "Press 'r' to reset timer • Press 't' for recent tasks • Press any other key to quit"
+		helpText = "Press 'D' to set title • 'r' to reset • 't' for history • any other key to quit"
 	}
-	
+
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
