@@ -1,5 +1,41 @@
 # Development Journal
 
+## 2026-01-07 14:30 - Code Refactoring: Split Monolithic File into Separate Modules
+
+### Overview
+
+Refactored the codebase from a single monolithic `tomato_timer.go` file (562 lines) into a modular structure with separate files for better readability and discoverability.
+
+### File Structure
+
+The codebase is now organized into 7 focused files:
+
+1. **`constants.go`** - All constants (padding, colors, durations, DB path) and styling helpers (`renderHelpText`, `helpStyle`)
+2. **`model.go`** - Model struct, types (`tickMsg`, `promptMsg`, `viewMode`, `session`), and initialization (`Init`, `tickCmd`)
+3. **`utils.go`** - Helper functions (`formatDurationAsMMSS`, `sendNotification`)
+4. **`database.go`** - Database operations (`saveSessionToDB`, `getRecentSessions`, `buildTableView`)
+5. **`handlers.go`** - All event handlers (`Update`, `updatePercent`, `updateKey`, and specialized key handlers)
+6. **`view.go`** - UI rendering logic (`View` method)
+7. **`main.go`** - Entry point and CLI flag parsing
+
+### Benefits
+
+- **Improved discoverability**: Each file has a clear, single responsibility making it easier to find specific functionality
+- **Better organization**: Related code is grouped together logically
+- **Easier maintenance**: Changes to specific features (e.g., database operations) are isolated to their respective files
+- **Preserved functionality**: All existing behavior maintained - no functional changes
+
+### Testing
+
+All 28 existing tests pass successfully after refactoring:
+- Database operations tests
+- View rendering tests
+- Key handling tests
+- Count-up mode tests
+- Timer functionality tests
+
+Build succeeds with no errors or warnings. The refactoring maintains 100% backward compatibility.
+
 ## 2026-01-02 10:15 - Count-Up Mode with Task Logging
 
 ### Feature Overview
