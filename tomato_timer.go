@@ -30,12 +30,48 @@ const (
 	defaultDurationInMinutes = 25
 	defaultCountUpDuration   = 3600
 	colorGrey                = "#626262"
+	colorLightGrey           = "#a0a0a0"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
 	sqliteDBFilePath         = "/.config/tomato-timer/tomato-timer.db"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
+
+// renderHelpText styles help text with two-tone formatting: shortcut letters in light grey, rest in grey
+func renderHelpText(text string) string {
+	lightGreyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorLightGrey))
+	greyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey))
+	
+	var result strings.Builder
+	i := 0
+	for i < len(text) {
+		if text[i] == '\'' && i+1 < len(text) {
+			// Found opening quote, find closing quote
+			start := i + 1
+			end := start
+			for end < len(text) && text[end] != '\'' {
+				end++
+			}
+			if end < len(text) {
+				// Found closing quote, style the shortcut letter(s) in light grey
+				shortcut := text[start:end]
+				result.WriteString(lightGreyStyle.Render(shortcut))
+				i = end + 1
+				continue
+			}
+		}
+		// Collect regular characters until we hit a quote or end of string
+		regularStart := i
+		for i < len(text) && text[i] != '\'' {
+			i++
+		}
+		if regularStart < i {
+			result.WriteString(greyStyle.Render(text[regularStart:i]))
+		}
+	}
+	return result.String()
+}
 
 func main() {
 	// Parse CLI flags
@@ -212,6 +248,11 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 }
 
 func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle Ctrl-Z to suspend in all modes
+	if msg.Type == tea.KeyCtrlZ {
+		return m, tea.Suspend
+	}
+
 	// Handle prompt input mode
 	if m.promptActive {
 		if msg.Type == tea.KeyEnter {
@@ -238,18 +279,9 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Handle table view mode
 	if m.mode == tableView {
-		// Allow Ctrl-Z to suspend in table view
-		if msg.Type == tea.KeyCtrlZ {
-			return m, tea.Suspend
-		}
-		// Any other key exits table view
+		// Any key exits table view
 		m.mode = timerView
 		return m, nil
-	}
-
-	// Allow Ctrl-Z to suspend the process in timer view
-	if msg.Type == tea.KeyCtrlZ {
-		return m, tea.Suspend
 	}
 
 	// Handle count-up mode keys
@@ -456,7 +488,7 @@ func (m model) View() string {
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + helpStyle(helpText)
+		pad + renderHelpText(helpText)
 }
 
 // A display helper for formatting the time remaining in the timer

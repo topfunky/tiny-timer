@@ -281,8 +281,8 @@ func TestTableViewMode(t *testing.T) {
 
 	// Verify timer view is displayed
 	view := m.View()
-	assert.Contains(t, view, "Press 'D' to set title")
-	assert.Contains(t, view, "'t' for history")
+	assert.Contains(t, view, "Press D to set title")
+	assert.Contains(t, view, "t for history")
 }
 
 func TestDateFormatInTable(t *testing.T) {
@@ -785,8 +785,8 @@ func TestCountUpViewDisplay(t *testing.T) {
 
 	view := m.View()
 	assert.Contains(t, view, "My Task", "Expected title to be displayed")
-	assert.Contains(t, view, "'d' to log task", "Expected count-up mode help text")
-	assert.Contains(t, view, "'D' to change title", "Expected title change help text")
+	assert.Contains(t, view, "d to log task", "Expected count-up mode help text")
+	assert.Contains(t, view, "D to change title", "Expected title change help text")
 }
 
 func TestNormalModeSetTitle(t *testing.T) {
