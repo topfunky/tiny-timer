@@ -20,6 +20,38 @@ func getDBPath() (string, error) {
 	return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
 }
 
+// initDB initializes the database and creates the sessions table if it doesn't exist
+func initDB() error {
+	dbPath, err := getDBPath()
+	if err != nil {
+		return err
+	}
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
+		return err
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
+		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
+		"duration" INTEGER,
+		"completed" BOOLEAN,
+		"title" TEXT
+	);`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Save a record to SQLite DB that represents a working session as counted by the timer
 func saveSessionToDB(duration int64, completed bool, title string) error {
 	dbPath, err := getDBPath()

@@ -36,6 +36,59 @@ func setupTestDB(t *testing.T) (string, func()) {
 	return dbPath, cleanup
 }
 
+func TestInitDB(t *testing.T) {
+	// Set up a temporary database path
+	tempDBPath, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Initialize the database
+	err := initDB()
+	assert.NoError(t, err, "initDB should not return an error")
+
+	// Verify the database file was created
+	_, err = os.Stat(tempDBPath)
+	assert.NoError(t, err, "Database file should exist after initDB")
+
+	// Verify the sessions table was created
+	db, err := sql.Open("sqlite3", tempDBPath)
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Query the table to ensure it exists
+	var tableName string
+	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'").Scan(&tableName)
+	assert.NoError(t, err, "sessions table should exist")
+	assert.Equal(t, "sessions", tableName, "Table name should be 'sessions'")
+}
+
+func TestInitDBIdempotent(t *testing.T) {
+	// Set up a temporary database path
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Initialize the database twice
+	err := initDB()
+	assert.NoError(t, err, "First initDB should not return an error")
+
+	err = initDB()
+	assert.NoError(t, err, "Second initDB should not return an error (idempotent)")
+}
+
+func TestGetRecentSessionsOnEmptyDB(t *testing.T) {
+	// Set up a temporary database path
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Initialize the database
+	err := initDB()
+	assert.NoError(t, err)
+
+	// Fetch recent sessions from empty database
+	sessions, err := getRecentSessions(10)
+	assert.NoError(t, err, "getRecentSessions should not error on empty database")
+	assert.Empty(t, sessions, "Expected no sessions in empty database")
+}
+
 func TestFormatDurationAsMMSS(t *testing.T) {
 	tests := []struct {
 		duration int64

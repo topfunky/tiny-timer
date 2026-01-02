@@ -16,6 +16,12 @@ import (
 )
 
 func main() {
+	// Initialize database on launch
+	if err := initDB(); err != nil {
+		fmt.Println("Error initializing database:", err)
+		os.Exit(1)
+	}
+
 	// Parse CLI flags
 	titleFlag := flag.String("title", "", "Optional title for the timer session")
 	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
