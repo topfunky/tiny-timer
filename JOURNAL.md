@@ -1,5 +1,71 @@
 # Development Journal
 
+## 2026-01-02 17:15 - Fixed Database Initialization on First Run
+
+### Problem
+
+On first run, pressing 't' to view task history would fail with an error because the database file and sessions table didn't exist yet. The app only created the database when saving a session, not on launch. This meant users couldn't view the (empty) task list on first run.
+
+### The Fix
+
+Added database initialization on application startup:
+
+**1. Created `initDB()` function:**
+```go
+func initDB() error {
+    dbPath, err := getDBPath()
+    if err != nil {
+        return err
+    }
+    dbDir := filepath.Dir(dbPath)
+    if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
+        return err
+    }
+    db, err := sql.Open("sqlite3", dbPath)
+    if err != nil {
+        return err
+    }
+    defer db.Close()
+
+    createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
+        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
+        "duration" INTEGER,
+        "completed" BOOLEAN,
+        "title" TEXT
+    );`
+
+    _, err = db.Exec(createTableSQL)
+    return err
+}
+```
+
+**2. Called `initDB()` in `main()`:**
+- Runs before parsing flags or creating the model
+- Exits with error message if initialization fails
+- Ensures database is ready before any user interaction
+
+### Benefits
+
+- **Better UX**: Users can press 't' on first run without errors
+- **Consistent state**: Database always exists when app is running
+- **Fail-fast**: Database errors are caught at startup, not during usage
+- **Idempotent**: Safe to call multiple times (uses `CREATE TABLE IF NOT EXISTS`)
+
+### Testing
+
+Added 3 new tests:
+1. `TestInitDB` - Verifies database and table creation
+2. `TestInitDBIdempotent` - Ensures safe to call multiple times
+3. `TestGetRecentSessionsOnEmptyDB` - Verifies querying empty database works
+
+Manual testing confirmed:
+- Database directory created on first launch
+- Database file created with correct schema
+- Pressing 't' on first run shows empty task list (no errors)
+
+All 31 tests pass successfully. Build succeeds with no errors.
+
 ## 2026-01-02 15:45 - Fixed Database Path Resolution for Cross-Platform Compatibility
 
 ### Problem
