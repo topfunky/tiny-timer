@@ -1,5 +1,48 @@
 # Development Journal
 
+## 2026-01-02 10:15 - Count-Up Mode with Task Logging
+
+### Feature Overview
+
+Added a new count-up mode (`--count-up` flag) that tracks elapsed time instead of counting down. This mode starts with a 1-hour default duration and allows logging of tasks as they complete.
+
+### Key Features
+
+1. **Command-line flag**: `--count-up` enables the mode (default: off)
+2. **Default duration**: 1 hour (3600 seconds) for count-up sessions
+3. **Task logging**: Press 'd' to log current session and start a new 1-hour count
+   - Prompts user for task title
+   - Saves title and elapsed time to SQLite database
+   - Resets timer for next session
+4. **Title-only mode**: Press 'D' to change the current task title without logging
+   - Prompts user for new title
+   - Updates display title
+   - Continues current elapsed time (no reset)
+5. **Updated help text**: Context-sensitive help for count-up vs countdown mode
+6. **Database persistence**: All logged tasks stored in SQLite with timestamps
+
+### Implementation Details
+
+- Added `countUpMode` field to model to track mode state
+- Added `promptMsg` message type for title input handling
+- Added prompt input UI with text buffer and backspace support
+- Modified `updatePercent()` to continuously show elapsed time in count-up mode
+- Modified `View()` to display elapsed time and appropriate help text based on mode
+- Added `handlePromptInput()` to process task logging or title-only updates
+
+### Testing
+
+Added 9 comprehensive tests covering:
+- Count-up mode initialization with correct defaults
+- Elapsed time tracking
+- Key bindings (d and D)
+- Prompt activation and input handling
+- Session logging to database
+- Title-only mode without logging
+- UI display of help text and elapsed time
+
+All existing tests continue to pass. Build succeeds with no errors.
+
 ## 2026-01-01 19:30 - Fixed Ctrl-Z Suspend/Resume Support
 
 ### Problem
