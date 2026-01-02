@@ -247,6 +247,158 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// buildTableView creates a table model from recent sessions
+func buildTableView(limit int) (table.Model, error) {
+	sessions, err := getRecentSessions(limit)
+	if err != nil {
+		return table.Model{}, err
+	}
+
+	columns := []table.Column{
+		{Title: "Title", Width: 40},
+		{Title: "Duration", Width: 10},
+		{Title: "Date", Width: 20},
+	}
+
+	rows := []table.Row{}
+	for _, s := range sessions {
+		title := s.title
+		if title == "" {
+			title = "(no title)"
+		}
+		duration := formatDurationAsMMSS(s.duration)
+		datetime := s.datetime
+		if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+			datetime = t.Format("Monday, 2 Jan 06")
+		}
+		rows = append(rows, table.Row{title, duration, datetime})
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(false),
+		table.WithHeight(len(rows)),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color(colorGrey)).
+		BorderBottom(true).
+		Bold(false).
+		Foreground(lipgloss.Color(colorGrey)).
+		Padding(0, 0)
+	s.Cell = s.Cell.
+		Padding(0, 0)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color(colorCream)).
+		Background(lipgloss.Color(colorGrey)).
+		Bold(false)
+	t.SetStyles(s)
+
+	return t, nil
+}
+
+// handlePromptKeyInput handles key input when prompt is active
+func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyEnter {
+		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == 0})
+	} else if msg.Type == tea.KeyEsc {
+		m.promptActive = false
+		return m, nil
+	} else if msg.Type == tea.KeyBackspace {
+		if len(m.inputBuffer) > 0 {
+			m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
+		}
+		return m, nil
+	} else if msg.Type == tea.KeySpace {
+		m.inputBuffer += " "
+		return m, nil
+	} else if msg.Type == tea.KeyRunes {
+		for _, r := range msg.Runes {
+			m.inputBuffer += string(r)
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+// handleTableViewKey handles key input when in table view mode
+func handleTableViewKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Any key exits table view
+	m.mode = timerView
+	return m, nil
+}
+
+// handleCountUpModeKey handles key input in count-up mode
+func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	switch key {
+	case "d":
+		// Prompt for title, log to DB, and start new session
+		m.promptActive = true
+		m.promptType = 0
+		m.inputBuffer = m.title
+		return m, nil
+	case "D":
+		// Prompt for title only, continue timer without logging
+		m.promptActive = true
+		m.promptType = 1
+		m.inputBuffer = m.title
+		return m, nil
+	case "r":
+		// Reset timer in count-up mode
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
+	case "t":
+		// Show table view
+		t, err := buildTableView(10)
+		if err != nil {
+			fmt.Println("Error fetching sessions:", err)
+			return m, nil
+		}
+		m.table = t
+		m.mode = tableView
+		return m, nil
+	default:
+		// Quit on other keys
+		return m, tea.Quit
+	}
+}
+
+// handleTimerModeKey handles key input in timer mode (non count-up)
+func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	switch key {
+	case "D":
+		// Prompt for title only
+		m.promptActive = true
+		m.promptType = 1
+		m.inputBuffer = m.title
+		return m, nil
+	case "r":
+		// Reset timer
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
+	case "t":
+		// Show table view of recent sessions
+		t, err := buildTableView(10)
+		if err != nil {
+			fmt.Println("Error fetching sessions:", err)
+			return m, nil
+		}
+		m.table = t
+		m.mode = tableView
+		return m, nil
+	default:
+		// Quit if any other key is pressed
+		return m, tea.Quit
+	}
+}
+
 func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle Ctrl-Z to suspend in all modes
 	if msg.Type == tea.KeyCtrlZ {
@@ -255,186 +407,21 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Handle prompt input mode
 	if m.promptActive {
-		if msg.Type == tea.KeyEnter {
-			return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == 0})
-		} else if msg.Type == tea.KeyEsc {
-			m.promptActive = false
-			return m, nil
-		} else if msg.Type == tea.KeyBackspace {
-			if len(m.inputBuffer) > 0 {
-				m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
-			}
-			return m, nil
-		} else if msg.Type == tea.KeySpace {
-			m.inputBuffer += " "
-			return m, nil
-		} else if msg.Type == tea.KeyRunes {
-			for _, r := range msg.Runes {
-				m.inputBuffer += string(r)
-			}
-			return m, nil
-		}
-		return m, nil
+		return handlePromptKeyInput(m, msg)
 	}
 
 	// Handle table view mode
 	if m.mode == tableView {
-		// Any key exits table view
-		m.mode = timerView
-		return m, nil
+		return handleTableViewKey(m, msg)
 	}
 
 	// Handle count-up mode keys
 	if m.countUpMode {
-		if msg.String() == "d" {
-			// Prompt for title, log to DB, and start new session
-			m.promptActive = true
-			m.promptType = 0
-			m.inputBuffer = m.title
-			return m, nil
-		} else if msg.String() == "D" {
-			// Prompt for title only, continue timer without logging
-			m.promptActive = true
-			m.promptType = 1
-			m.inputBuffer = m.title
-			return m, nil
-		} else if msg.String() == "r" {
-			// Reset timer in count-up mode
-			m.startTime = time.Now().Unix()
-			cmd := m.progress.SetPercent(0)
-			return m, tea.Batch(tickCmd(), cmd)
-		} else if msg.String() == "t" {
-			// Show table view
-			sessions, err := getRecentSessions(10)
-			if err != nil {
-				fmt.Println("Error fetching sessions:", err)
-				return m, nil
-			}
-
-			columns := []table.Column{
-				{Title: "Title", Width: 40},
-				{Title: "Duration", Width: 10},
-				{Title: "Date", Width: 20},
-			}
-
-			rows := []table.Row{}
-			for _, s := range sessions {
-				title := s.title
-				if title == "" {
-					title = "(no title)"
-				}
-				duration := formatDurationAsMMSS(s.duration)
-				datetime := s.datetime
-				if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
-					datetime = t.Format("Monday, 2 Jan 06")
-				}
-				rows = append(rows, table.Row{title, duration, datetime})
-			}
-
-			t := table.New(
-				table.WithColumns(columns),
-				table.WithRows(rows),
-				table.WithFocused(false),
-				table.WithHeight(len(rows)),
-			)
-
-			s := table.DefaultStyles()
-			s.Header = s.Header.
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color(colorGrey)).
-				BorderBottom(true).
-				Bold(false).
-				Foreground(lipgloss.Color(colorGrey)).
-				Padding(0, 0)
-			s.Cell = s.Cell.
-				Padding(0, 0)
-			s.Selected = s.Selected.
-				Foreground(lipgloss.Color(colorCream)).
-				Background(lipgloss.Color(colorGrey)).
-				Bold(false)
-			t.SetStyles(s)
-
-			m.table = t
-			m.mode = tableView
-			return m, nil
-		}
-		// Quit on other keys
-		return m, tea.Quit
+		return handleCountUpModeKey(m, msg)
 	}
 
 	// Handle timer view mode (non count-up)
-	if msg.String() == "D" {
-		// Prompt for title only
-		m.promptActive = true
-		m.promptType = 1
-		m.inputBuffer = m.title
-		return m, nil
-	} else if msg.String() == "r" {
-		// Reset timer
-		m.startTime = time.Now().Unix()
-		cmd := m.progress.SetPercent(0)
-		return m, tea.Batch(tickCmd(), cmd)
-	} else if msg.String() == "t" {
-		// Show table view of recent sessions
-		sessions, err := getRecentSessions(10)
-		if err != nil {
-			fmt.Println("Error fetching sessions:", err)
-			return m, nil
-		}
-
-		// Build table with left-aligned columns
-		columns := []table.Column{
-			{Title: "Title", Width: 40},
-			{Title: "Duration", Width: 10},
-			{Title: "Date", Width: 20},
-		}
-
-		rows := []table.Row{}
-		for _, s := range sessions {
-			title := s.title
-			if title == "" {
-				title = "(no title)"
-			}
-			duration := formatDurationAsMMSS(s.duration)
-			// Parse and format the datetime to be more readable
-			datetime := s.datetime
-			if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
-				datetime = t.Format("Monday, 2 Jan 06")
-			}
-
-			rows = append(rows, table.Row{title, duration, datetime})
-		}
-
-		t := table.New(
-			table.WithColumns(columns),
-			table.WithRows(rows),
-			table.WithFocused(false),
-			table.WithHeight(len(rows)),
-		)
-
-		s := table.DefaultStyles()
-		s.Header = s.Header.
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color(colorGrey)).
-			BorderBottom(true).
-			Bold(false).
-			Foreground(lipgloss.Color(colorGrey)).
-			Padding(0, 0)
-		s.Cell = s.Cell.
-			Padding(0, 0)
-		s.Selected = s.Selected.
-			Foreground(lipgloss.Color(colorCream)).
-			Background(lipgloss.Color(colorGrey)).
-			Bold(false)
-		t.SetStyles(s)
-
-		m.table = t
-		m.mode = tableView
-		return m, nil
-	} else {
-		// Quit if any key is pressed
-		return m, tea.Quit
-	}
+	return handleTimerModeKey(m, msg)
 }
 
 // Handler that draws the UI of the application
