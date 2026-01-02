@@ -28,6 +28,7 @@ const (
 	padding                  = 2
 	maxWidth                 = 80
 	defaultDurationInMinutes = 25
+	defaultCountUpDuration   = 3600
 	colorGrey                = "#626262"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
@@ -39,6 +40,7 @@ var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
 func main() {
 	// Parse CLI flags
 	titleFlag := flag.String("title", "", "Optional title for the timer session")
+	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
 	flag.Parse()
 
 	// Read positional arg for duration, or use default
@@ -49,11 +51,17 @@ func main() {
 		}
 	}
 
+	targetDuration := targetDurationInMinutes * 60
+	if *countUpFlag {
+		targetDuration = defaultCountUpDuration
+	}
+
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
-		targetDuration: targetDurationInMinutes * 60,
+		targetDuration: targetDuration,
 		title:          *titleFlag,
+		countUpMode:    *countUpFlag,
 	}
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
@@ -63,6 +71,11 @@ func main() {
 }
 
 type tickMsg time.Time
+
+type promptMsg struct {
+	title  string
+	logDB  bool
+}
 
 type viewMode int
 
@@ -86,6 +99,10 @@ type model struct {
 	title          string
 	mode           viewMode
 	table          table.Model
+	countUpMode    bool
+	inputBuffer    string
+	promptActive   bool
+	promptType     int // 0 = new session (d), 1 = title only (D)
 }
 
 // Start the event loop
@@ -112,6 +129,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		return updatePercent(m)
 
+	case promptMsg:
+		return handlePromptInput(m, msg)
+
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
@@ -128,6 +148,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func updatePercent(m model) (tea.Model, tea.Cmd) {
 	elapsed := time.Now().Unix() - m.startTime
+	
+	if m.countUpMode {
+		// In count-up mode, just update the progress bar to show elapsed time
+		percentCompleted := float64(elapsed) / float64(m.targetDuration)
+		if percentCompleted > 1.0 {
+			percentCompleted = 1.0
+		}
+		cmd := m.progress.SetPercent(percentCompleted)
+		return m, tea.Batch(tickCmd(), cmd)
+	}
+	
 	percentCompleted := float64(elapsed) / float64(m.targetDuration)
 
 	// Check for completion based on actual elapsed time
@@ -159,7 +190,52 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
+	m.promptActive = false
+	
+	if m.promptType == 0 {
+		// Log session to DB and start new count
+		elapsed := time.Now().Unix() - m.startTime
+		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
+			fmt.Println("Error saving session to DB:", err)
+		}
+		// Reset timer for new session
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		m.title = ""
+		return m, tea.Batch(tickCmd(), cmd)
+	} else {
+		// Just update title without logging
+		m.title = msg.title
+		return m, tickCmd()
+	}
+}
+
 func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle prompt input mode
+	if m.promptActive {
+		if msg.Type == tea.KeyEnter {
+			return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == 0})
+		} else if msg.Type == tea.KeyEsc {
+			m.promptActive = false
+			return m, nil
+		} else if msg.Type == tea.KeyBackspace {
+			if len(m.inputBuffer) > 0 {
+				m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
+			}
+			return m, nil
+		} else if msg.Type == tea.KeySpace {
+			m.inputBuffer += " "
+			return m, nil
+		} else if msg.Type == tea.KeyRunes {
+			for _, r := range msg.Runes {
+				m.inputBuffer += string(r)
+			}
+			return m, nil
+		}
+		return m, nil
+	}
+
 	// Handle table view mode
 	if m.mode == tableView {
 		// Allow Ctrl-Z to suspend in table view
@@ -176,7 +252,85 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Suspend
 	}
 
-	// Handle timer view mode
+	// Handle count-up mode keys
+	if m.countUpMode {
+		if msg.String() == "d" {
+			// Prompt for title, log to DB, and start new session
+			m.promptActive = true
+			m.promptType = 0
+			m.inputBuffer = m.title
+			return m, nil
+		} else if msg.String() == "D" {
+			// Prompt for title only, continue timer without logging
+			m.promptActive = true
+			m.promptType = 1
+			m.inputBuffer = m.title
+			return m, nil
+		} else if msg.String() == "r" {
+			// Reset timer in count-up mode
+			m.startTime = time.Now().Unix()
+			cmd := m.progress.SetPercent(0)
+			return m, tea.Batch(tickCmd(), cmd)
+		} else if msg.String() == "t" {
+			// Show table view
+			sessions, err := getRecentSessions(10)
+			if err != nil {
+				fmt.Println("Error fetching sessions:", err)
+				return m, nil
+			}
+
+			columns := []table.Column{
+				{Title: "Title", Width: 40},
+				{Title: "Duration", Width: 10},
+				{Title: "Date", Width: 20},
+			}
+
+			rows := []table.Row{}
+			for _, s := range sessions {
+				title := s.title
+				if title == "" {
+					title = "(no title)"
+				}
+				duration := formatDurationAsMMSS(s.duration)
+				datetime := s.datetime
+				if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+					datetime = t.Format("Monday, 2 Jan 06")
+				}
+				rows = append(rows, table.Row{title, duration, datetime})
+			}
+
+			t := table.New(
+				table.WithColumns(columns),
+				table.WithRows(rows),
+				table.WithFocused(false),
+				table.WithHeight(len(rows)),
+			)
+
+			s := table.DefaultStyles()
+			s.Header = s.Header.
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color(colorGrey)).
+				BorderBottom(true).
+				Bold(false).
+				Foreground(lipgloss.Color(colorGrey)).
+				Padding(0, 0)
+			s.Cell = s.Cell.
+				Padding(0, 0)
+			s.Selected = s.Selected.
+				Foreground(lipgloss.Color(colorCream)).
+				Background(lipgloss.Color(colorGrey)).
+				Bold(false)
+			t.SetStyles(s)
+
+			m.table = t
+			m.mode = tableView
+			return m, nil
+		}
+		// Quit on other keys
+		return m, tea.Quit
+	}
+
+	// Handle timer view mode (non count-up)
 	if msg.String() == "r" {
 		// Reset timer
 		m.startTime = time.Now().Unix()
@@ -247,6 +401,12 @@ func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // Handler that draws the UI of the application
 func (m model) View() string {
+	if m.promptActive {
+		pad := strings.Repeat(" ", padding)
+		promptText := "Enter task title: " + m.inputBuffer
+		return "\n" + pad + promptText + "\n\n" + pad + helpStyle("Press Enter to confirm")
+	}
+
 	if m.mode == tableView {
 		pad := strings.Repeat(" ", padding)
 		// Apply padding to each line of the table
@@ -260,10 +420,16 @@ func (m model) View() string {
 			pad + helpStyle("Press any key to return to timer")
 	}
 
-	remaining := m.targetDuration - (time.Now().Unix() - m.startTime)
-	if remaining <= 0 {
+	elapsed := time.Now().Unix() - m.startTime
+	remaining := m.targetDuration - elapsed
+
+	if m.countUpMode {
+		remaining = elapsed
+	}
+
+	if remaining < 0 {
 		// When it completes, display the original duration of the timer
-		remaining = m.targetDuration
+		remaining = 0
 	}
 
 	pad := strings.Repeat(" ", padding)
@@ -274,10 +440,17 @@ func (m model) View() string {
 		titleLine = pad + m.title + "\n\n"
 	}
 	
+	var helpText string
+	if m.countUpMode {
+		helpText = "Press 'd' to log task • 'D' to change title • 'r' to reset • 't' for history"
+	} else {
+		helpText = "Press 'r' to reset timer • Press 't' for recent tasks • Press any other key to quit"
+	}
+	
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + helpStyle("Press 'r' to reset timer • Press 't' for recent tasks • Press any other key to quit")
+		pad + helpStyle(helpText)
 }
 
 // A display helper for formatting the time remaining in the timer

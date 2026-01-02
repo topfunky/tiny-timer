@@ -604,3 +604,187 @@ func TestOtherKeysStillQuitTimerView(t *testing.T) {
 	// Verify a quit command was returned (we can't directly test if it's tea.Quit, but we know it's not nil)
 	assert.NotNil(t, cmd, "Expected quit command to be returned for non-special keys")
 }
+
+func TestCountUpModeInitialization(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+	}
+
+	assert.True(t, m.countUpMode, "Expected count-up mode to be enabled")
+	assert.Equal(t, int64(3600), m.targetDuration, "Expected 1 hour default duration in count-up mode")
+}
+
+func TestCountUpModeElapsedTime(t *testing.T) {
+	startTime := time.Now().Unix() - 30
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      startTime,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+	}
+
+	elapsed := time.Now().Unix() - m.startTime
+	assert.True(t, elapsed >= 30 && elapsed <= 32, "Expected elapsed time to be approximately 30 seconds")
+}
+
+func TestCountUpModeKeysActivatePrompt(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+	}
+
+	// Test 'd' key activates prompt for logging
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ := m.Update(keyMsg)
+	modelTyped := newModel.(model)
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 'd'")
+	assert.Equal(t, 0, modelTyped.promptType, "Expected promptType to be 0 (log and reset)")
+
+	// Test 'D' key activates prompt for title only
+	m.promptActive = false
+	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}}
+	newModel, _ = m.Update(keyMsg)
+	modelTyped = newModel.(model)
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 'D'")
+	assert.Equal(t, 1, modelTyped.promptType, "Expected promptType to be 1 (title only)")
+}
+
+func TestCountUpModePromptInput(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+		promptActive:   true,
+		inputBuffer:    "",
+		promptType:     0,
+	}
+
+	// Test typing characters
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T', 'e', 's', 't'}}
+	newModel, _ := m.Update(keyMsg)
+	modelTyped := newModel.(model)
+	assert.Equal(t, "Test", modelTyped.inputBuffer, "Expected input buffer to accumulate typed characters")
+
+	// Test backspace
+	keyMsg = tea.KeyMsg{Type: tea.KeyBackspace}
+	newModel, _ = modelTyped.Update(keyMsg)
+	modelTyped = newModel.(model)
+	assert.Equal(t, "Tes", modelTyped.inputBuffer, "Expected backspace to remove last character")
+}
+
+func TestCountUpModePromptLogAndReset(t *testing.T) {
+	tempDBPath := os.TempDir() + sqlite_db_file_path
+	os.Setenv("HOME", os.TempDir())
+	defer os.Remove(tempDBPath)
+
+	startTime := time.Now().Unix() - 120
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      startTime,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+	}
+
+	// Simulate prompt completion (type 0 = log and reset)
+	newModel, _ := m.Update(promptMsg{title: "Test Task", logDB: true})
+	modelTyped := newModel.(model)
+
+	assert.Equal(t, "", modelTyped.title, "Expected title to be blank after logging")
+	assert.False(t, modelTyped.promptActive, "Expected prompt to be inactive after completion")
+
+	// Verify session was saved to DB
+	db, err := sql.Open("sqlite3", tempDBPath)
+	assert.NoError(t, err)
+	defer db.Close()
+
+	var count int
+	var savedTitle string
+	err = db.QueryRow("SELECT COUNT(*), title FROM sessions WHERE title = ?", "Test Task").Scan(&count, &savedTitle)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count, "Expected session to be saved to database")
+	assert.Equal(t, "Test Task", savedTitle, "Expected task title to be saved")
+}
+
+func TestCountUpModePromptTitleOnly(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 50,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+		title:          "Old Title",
+	}
+
+	// Test that pressing 'D' activates title-only prompt
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}}
+	newModel, _ := m.Update(keyMsg)
+	modelTyped := newModel.(model)
+
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 'D'")
+	assert.Equal(t, 1, modelTyped.promptType, "Expected promptType to be 1 (title only)")
+	assert.Equal(t, "Old Title", modelTyped.inputBuffer, "Expected input buffer to pre-fill with current title")
+
+	// Now test that input works in prompt mode (appending to pre-filled text)
+	m = modelTyped
+	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'N', 'e', 'w'}}
+	newModel, _ = m.Update(keyMsg)
+	modelTyped = newModel.(model)
+	assert.Equal(t, "Old TitleNew", modelTyped.inputBuffer, "Expected input buffer to contain pre-filled text plus typed text")
+}
+
+func TestCountUpModePromptWithSpaces(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 50,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+		title:          "Work",
+	}
+
+	// Activate prompt with 'd' key
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ := m.Update(keyMsg)
+	m = newModel.(model)
+	assert.True(t, m.promptActive, "Expected prompt to be active")
+
+	// Type "Work on " with space
+	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o', 'n', ' ', 't', 'a', 's', 'k'}}
+	newModel, _ = m.Update(keyMsg)
+	m = newModel.(model)
+	assert.Equal(t, "Workon task", m.inputBuffer, "Expected input to include space from runes")
+
+	// Also test explicit space key
+	m.inputBuffer = "Test"
+	keyMsg = tea.KeyMsg{Type: tea.KeySpace}
+	newModel, _ = m.Update(keyMsg)
+	m = newModel.(model)
+	assert.Equal(t, "Test ", m.inputBuffer, "Expected KeySpace to add space to input buffer")
+}
+
+func TestCountUpViewDisplay(t *testing.T) {
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 600,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+		title:          "My Task",
+	}
+
+	view := m.View()
+	assert.Contains(t, view, "My Task", "Expected title to be displayed")
+	assert.Contains(t, view, "'d' to log task", "Expected count-up mode help text")
+	assert.Contains(t, view, "'D' to change title", "Expected title change help text")
+}
