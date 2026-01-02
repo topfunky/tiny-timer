@@ -32,7 +32,7 @@ const (
 	colorGrey                = "#626262"
 	colorCream               = "#fefdbc"
 	colorMontezumaGold       = "#f0c442"
-	sqlite_db_file_path      = "/.config/tomato-timer/tomato-timer.db"
+	sqliteDBFilePath         = "/.config/tomato-timer/tomato-timer.db"
 )
 
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey)).Render
@@ -480,7 +480,7 @@ func sendNotification(title, message string) error {
 
 // Save a record to SQLite DB that represents a working session as counted by the timer
 func saveSessionToDB(duration int64, completed bool, title string) error {
-	dbPath := os.Getenv("HOME") + sqlite_db_file_path
+	dbPath := os.Getenv("HOME") + sqliteDBFilePath
 	if err := os.MkdirAll(os.Getenv("HOME")+"/.config/tomato-timer", os.ModePerm); err != nil {
 		return err
 	}
@@ -514,7 +514,7 @@ func saveSessionToDB(duration int64, completed bool, title string) error {
 
 // Fetch recent sessions from the database
 func getRecentSessions(limit int) ([]session, error) {
-	dbPath := os.Getenv("HOME") + sqlite_db_file_path
+	dbPath := os.Getenv("HOME") + sqliteDBFilePath
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
