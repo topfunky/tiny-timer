@@ -102,7 +102,7 @@ func getRecentSessions(limit int) ([]session, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT id, datetime, duration, completed, title FROM sessions ORDER BY datetime DESC LIMIT ?`
+	query := `SELECT id, datetime, duration, completed, title FROM sessions ORDER BY datetime DESC, id DESC LIMIT ?`
 	rows, err := db.Query(query, limit)
 	if err != nil {
 		return nil, err

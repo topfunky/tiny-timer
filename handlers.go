@@ -84,10 +84,14 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 
 	switch m.promptType {
 	case promptLogAndReset:
-		// Log session to DB and start new count
+		// Log session to DB and start new session
 		elapsed := time.Now().Unix() - m.startTime
 		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
 			fmt.Println("Error saving session to DB:", err)
+		}
+		// Refresh history table if we are logging
+		if t, err := buildTableView(10); err == nil {
+			m.table = t
 		}
 		// Reset timer for new session
 		m.startTime = time.Now().Unix()

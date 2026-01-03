@@ -16,16 +16,38 @@ import (
 )
 
 func main() {
+	// Parse CLI flags
+	titleFlag := flag.String("title", "", "Optional title for the timer session")
+	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
+	cleanFlag := flag.Bool("clean", false, "Delete the database and exit")
+	flag.Parse()
+
+	if *cleanFlag {
+		dbPath, err := getDBPath()
+		if err != nil {
+			fmt.Println("Error getting database path:", err)
+			os.Exit(1)
+		}
+		if _, err := os.Stat(dbPath); err == nil {
+			if err := os.Remove(dbPath); err != nil {
+				fmt.Println("Error deleting database:", err)
+				os.Exit(1)
+			}
+			fmt.Println("Database deleted successfully.")
+		} else if os.IsNotExist(err) {
+			fmt.Println("Database does not exist.")
+		} else {
+			fmt.Println("Error checking database:", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	// Initialize database on launch
 	if err := initDB(); err != nil {
 		fmt.Println("Error initializing database:", err)
 		os.Exit(1)
 	}
-
-	// Parse CLI flags
-	titleFlag := flag.String("title", "", "Optional title for the timer session")
-	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
-	flag.Parse()
 
 	// Read positional arg for duration, or use default
 	var targetDurationInMinutes int64 = defaultDurationInMinutes
