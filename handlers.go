@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -81,7 +82,8 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	m.promptActive = false
 
-	if m.promptType == 0 {
+	switch m.promptType {
+	case promptLogAndReset:
 		// Log session to DB and start new count
 		elapsed := time.Now().Unix() - m.startTime
 		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
@@ -92,17 +94,32 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 		cmd := m.progress.SetPercent(0)
 		m.title = ""
 		return m, tea.Batch(tickCmd(), cmd)
-	} else {
+	case promptEditTitle:
 		// Just update title without logging
 		m.title = msg.title
 		return m, tickCmd()
+	case promptSetDuration:
+		// Set duration in minutes
+		var minutes int64
+		if n, err := strconv.ParseInt(msg.title, 10, 64); err == nil && n > 0 {
+			minutes = n
+		} else {
+			// Invalid input, keep current duration
+			return m, tickCmd()
+		}
+		m.targetDuration = minutes * 60
+		// Reset timer with new duration
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
 	}
+	return m, tickCmd()
 }
 
 // handlePromptKeyInput handles key input when prompt is active
 func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyEnter {
-		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == 0})
+		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == promptLogAndReset})
 	} else if msg.Type == tea.KeyEsc {
 		m.promptActive = false
 		return m, nil
@@ -112,11 +129,21 @@ func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	} else if msg.Type == tea.KeySpace {
-		m.inputBuffer += " "
+		// Only allow space for title prompts, not duration
+		if m.promptType != promptSetDuration {
+			m.inputBuffer += " "
+		}
 		return m, nil
 	} else if msg.Type == tea.KeyRunes {
 		for _, r := range msg.Runes {
-			m.inputBuffer += string(r)
+			// For duration prompts, only allow numeric characters
+			if m.promptType == promptSetDuration {
+				if r >= '0' && r <= '9' {
+					m.inputBuffer += string(r)
+				}
+			} else {
+				m.inputBuffer += string(r)
+			}
 		}
 		return m, nil
 	}
@@ -135,24 +162,13 @@ func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	switch key {
 	case "d":
-		// Prompt for title, log to DB, and start new session
+		// Mark task as done: prompt for title, log to DB, and start new session
 		m.promptActive = true
-		m.promptType = 0
+		m.promptType = promptLogAndReset
 		m.inputBuffer = m.title
 		return m, nil
-	case "D":
-		// Prompt for title only, continue timer without logging
-		m.promptActive = true
-		m.promptType = 1
-		m.inputBuffer = m.title
-		return m, nil
-	case "r":
-		// Reset timer in count-up mode
-		m.startTime = time.Now().Unix()
-		cmd := m.progress.SetPercent(0)
-		return m, tea.Batch(tickCmd(), cmd)
-	case "t":
-		// Show table view
+	case "h":
+		// Show history (table view)
 		t, err := buildTableView(10)
 		if err != nil {
 			fmt.Println("Error fetching sessions:", err)
@@ -161,6 +177,25 @@ func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.table = t
 		m.mode = tableView
 		return m, nil
+	case "t":
+		// Edit current task title
+		m.promptActive = true
+		m.promptType = promptEditTitle
+		m.inputBuffer = m.title
+		return m, nil
+	case "m":
+		// Set target duration in minutes
+		m.promptActive = true
+		m.promptType = promptSetDuration
+		// Pre-fill with current duration in minutes
+		currentMinutes := m.targetDuration / 60
+		m.inputBuffer = strconv.FormatInt(currentMinutes, 10)
+		return m, nil
+	case "r":
+		// Reset timer in count-up mode
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
 	default:
 		// Quit on other keys
 		return m, tea.Quit
@@ -171,19 +206,14 @@ func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	switch key {
-	case "D":
-		// Prompt for title only
+	case "d":
+		// Mark task as done: prompt for title, log to DB, and reset timer
 		m.promptActive = true
-		m.promptType = 1
+		m.promptType = promptLogAndReset
 		m.inputBuffer = m.title
 		return m, nil
-	case "r":
-		// Reset timer
-		m.startTime = time.Now().Unix()
-		cmd := m.progress.SetPercent(0)
-		return m, tea.Batch(tickCmd(), cmd)
-	case "t":
-		// Show table view of recent sessions
+	case "h":
+		// Show history (table view)
 		t, err := buildTableView(10)
 		if err != nil {
 			fmt.Println("Error fetching sessions:", err)
@@ -192,6 +222,25 @@ func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.table = t
 		m.mode = tableView
 		return m, nil
+	case "t":
+		// Edit current task title
+		m.promptActive = true
+		m.promptType = promptEditTitle
+		m.inputBuffer = m.title
+		return m, nil
+	case "m":
+		// Set target duration in minutes
+		m.promptActive = true
+		m.promptType = promptSetDuration
+		// Pre-fill with current duration in minutes
+		currentMinutes := m.targetDuration / 60
+		m.inputBuffer = strconv.FormatInt(currentMinutes, 10)
+		return m, nil
+	case "r":
+		// Reset timer
+		m.startTime = time.Now().Unix()
+		cmd := m.progress.SetPercent(0)
+		return m, tea.Batch(tickCmd(), cmd)
 	default:
 		// Quit if any other key is pressed
 		return m, tea.Quit

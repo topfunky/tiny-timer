@@ -10,8 +10,13 @@ import (
 func (m model) View() string {
 	if m.promptActive {
 		pad := strings.Repeat(" ", padding)
-		promptText := "Enter task title: " + m.inputBuffer
-		return "\n" + pad + promptText + "\n\n" + pad + helpStyle("Press Enter to confirm")
+		var promptText string
+		if m.promptType == 2 {
+			promptText = "Enter duration in minutes: " + m.inputBuffer
+		} else {
+			promptText = "Enter task title: " + m.inputBuffer
+		}
+		return "\n" + pad + promptText + "\n\n" + pad + helpStyle("Press Enter to confirm, Esc to cancel")
 	}
 
 	if m.mode == tableView {
@@ -49,9 +54,9 @@ func (m model) View() string {
 
 	var helpText string
 	if m.countUpMode {
-		helpText = "'d' log task • 'D' change title • 'r' reset • 't' history"
+		helpText = "'d' done • 'h' history • 't' title • 'm' minutes • 'r' reset • any other key to quit"
 	} else {
-		helpText = "'D' set title • 'r' reset • 't' history • any other key to quit"
+		helpText = "'d' done • 'h' history • 't' title • 'm' minutes • 'r' reset • any other key to quit"
 	}
 
 	return "\n" +

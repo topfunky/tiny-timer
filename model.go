@@ -22,6 +22,14 @@ const (
 	tableView
 )
 
+type promptType int
+
+const (
+	promptLogAndReset promptType = iota // Log session to DB and reset timer (d key)
+	promptEditTitle                     // Edit title without logging (t key)
+	promptSetDuration                   // Set target duration in minutes (m key)
+)
+
 type session struct {
 	id        int
 	datetime  string
@@ -40,7 +48,7 @@ type model struct {
 	countUpMode    bool
 	inputBuffer    string
 	promptActive   bool
-	promptType     int // 0 = new session (d), 1 = title only (D)
+	promptType     promptType
 }
 
 // Start the event loop
