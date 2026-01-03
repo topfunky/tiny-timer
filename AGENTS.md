@@ -37,12 +37,14 @@ make list       # Show all available make targets
 
 ## Code Organization
 
-- **`tomato_timer.go`**: Main file containing all application logic (single-file structure)
-  - Model struct and state management
-  - Event handlers (Update function with separate update* handlers)
-  - View rendering logic
-  - Database operations
-  - Helper functions (formatting, notifications)
+The codebase uses multiple files organized by responsibility:
+- **`main.go`**: Entry point and application initialization
+- **`model.go`**: Model struct and state management
+- **`handlers.go`**: Event handlers (Update function with separate update* handlers)
+- **`view.go`**: View rendering logic
+- **`database.go`**: Database operations
+- **`utils.go`**: Helper functions (formatting, notifications)
+- **`constants.go`**: Constants and configuration values
 - **`tomato_timer_test.go`**: Comprehensive test suite
   - Follows Go testing conventions (`*_test.go` suffix)
   - Uses `testify` assertions
@@ -89,9 +91,10 @@ This is critical because:
 ## Code Patterns & Conventions
 
 ### File Structure
-- Single monolithic `.go` file with all logic
-- No separate packages or subdirectories
-- All types and functions are at package level
+- Multiple `.go` files organized by responsibility (model, handlers, view, database, utils, constants)
+- All files are in the same package (main package)
+- Each file should have a clear, focused purpose
+- Related functionality should be grouped together logically
 
 ### Naming Conventions
 - **Types**: PascalCase (`viewMode`, `model`, `session`, `promptMsg`, `tickMsg`)
