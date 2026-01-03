@@ -5,7 +5,6 @@
 **Tomato Timer CLI** is a command-line Pomodoro timer written in Go. It features:
 - Countdown timer mode (default): tracks time remaining with an animated progress bar
 - Count-up mode (`--count-up`): tracks elapsed time and allows logging tasks to SQLite
-- Task history: view recent logged tasks with 't' key
 - TUI built with Bubble Tea framework (bubbletea + bubbles + lipgloss)
 - SQLite persistence for task logging
 - Cross-platform support (macOS notifications on darwin)
@@ -15,6 +14,12 @@
 See [`.ai/agents/VERSION_CONTROL.md`](.ai/agents/VERSION_CONTROL.md) for comprehensive version control guidelines using Jujutsu (jj).
 
 ## Essential Commands
+
+### Version control
+```bash
+jj show
+jj commit -m "feat: implement keyboard shortcuts"
+```
 
 ### Build & Install
 ```bash
