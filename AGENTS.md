@@ -21,6 +21,8 @@ jj show
 jj commit -m "feat: implement keyboard shortcuts"
 ```
 
+Never run `git` for any reason. Only use `jj`.
+
 ### Build & Install
 ```bash
 make build      # Build binary (outputs: tomato-timer)
