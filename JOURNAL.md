@@ -1,5 +1,195 @@
 # Development Journal
 
+## 2026-01-04 07:22 - Implemented Single Shared Database Connection and Debug Logging
+
+### Problem
+
+The previous fix (using `?_synchronous=FULL` and explicit connection closing) didn't fully resolve the first-save bug. The issue persisted because opening and closing separate database connections for each operation introduced timing issues, especially with SQLite's connection pooling and file system caching. Additionally, there was no way to debug database operations to understand what was happening.
+
+### The Solution
+
+Implemented a single shared database connection that is initialized once at application startup and reused for all database operations. This eliminates connection timing issues entirely. Also added a `--debug` flag that enables detailed logging to a file for troubleshooting.
+
+### Implementation Details
+
+**1. Created `db_connection.go` with global connection management:**
+```go
+var (
+    dbConnection *sql.DB
+    dbMutex      sync.Mutex
+    debugEnabled bool
+    debugLogFile *os.File
+    debugLogMutex sync.Mutex
+)
+
+func initDBConnection() error {
+    // Open connection with DELETE journal mode and FULL synchronous
+    // Set MaxOpenConns(1) to ensure single connection
+    // Initialize once, reuse everywhere
+}
+```
+
+**2. Refactored all database functions to use shared connection:**
+- `saveSessionToDB()` now calls `getDB()` instead of opening new connection
+- `getRecentSessions()` uses the shared connection
+- Removed all `sql.Open()` calls from database operations
+- Removed file system sync code (no longer needed)
+
+**3. Added debug logging system:**
+- `--debug` flag enables logging to `tomato-timer-debug.log` in current directory
+- Timestamped log entries for all database operations
+- Logs include: connection initialization, save operations, read operations, row counts, errors
+- Thread-safe logging with mutex protection
+
+**4. Updated main.go:**
+- Added `--debug` flag parsing
+- Initialize database connection at startup via `initDBConnection()`
+- Close connection on exit with `defer closeDBConnection()`
+
+**5. Updated tests:**
+- Modified `setupTestDB()` to initialize the shared connection
+- All tests now properly clean up the connection
+- All 40 tests pass successfully
+
+### Key Changes
+
+**Before:**
+```go
+func saveSessionToDB(...) error {
+    db, err := sql.Open("sqlite3", dbPath+"?_synchronous=FULL")
+    // ... write logic ...
+    db.Close()
+    // File sync code...
+    return nil
+}
+
+func getRecentSessions(...) ([]session, error) {
+    db, err := sql.Open("sqlite3", dbPath+"?_synchronous=FULL")
+    defer db.Close()
+    // ... read logic ...
+}
+```
+
+**After:**
+```go
+func saveSessionToDB(...) error {
+    db := getDB()  // Use shared connection
+    debugLog("saveSessionToDB: duration=%d, title=%q", duration, title)
+    tx, err := db.Begin()
+    // ... write logic ...
+    tx.Commit()
+    return nil
+}
+
+func getRecentSessions(...) ([]session, error) {
+    db := getDB()  // Use shared connection
+    debugLog("getRecentSessions: limit=%d", limit)
+    // ... read logic ...
+    debugLog("getRecentSessions: Retrieved %d session(s)", count)
+}
+```
+
+### Benefits
+
+- **Eliminates timing issues**: Single connection ensures writes are immediately visible to reads
+- **Better debugging**: Debug log shows exactly what's happening with database operations
+- **Cleaner code**: Removed complex file sync and connection management logic
+- **More reliable**: No connection pool issues or race conditions
+- **Easier troubleshooting**: Debug flag provides detailed operation logs
+
+### Debug Logging
+
+When run with `--debug` flag, the application writes detailed logs to `tomato-timer-debug.log`:
+
+```
+[2026-01-04 07:22:15.123] === Debug logging enabled ===
+[2026-01-04 07:22:15.124] Database connection initialized: /home/user/.config/tomato-timer/tomato-timer.db
+[2026-01-04 07:22:30.456] handlePromptInput: Saving session, elapsed=120, title="First Task"
+[2026-01-04 07:22:30.457] saveSessionToDB: duration=120, completed=true, title="First Task"
+[2026-01-04 07:22:30.458] saveSessionToDB: Inserted 1 row(s)
+[2026-01-04 07:22:30.459] saveSessionToDB: Successfully saved session
+[2026-01-04 07:22:30.460] handlePromptInput: Building table view after save
+[2026-01-04 07:22:30.461] getRecentSessions: limit=10
+[2026-01-04 07:22:30.462] getRecentSessions: Retrieved 1 session(s)
+[2026-01-04 07:22:30.463] handlePromptInput: Table view built with 1 rows
+```
+
+### Testing
+
+All 40 tests pass successfully:
+- Database connection initialization tests
+- Save/retrieve operations tests
+- History table display tests
+- First-save-then-immediate-read test (TestFirstSaveThenImmediateHistoryRead)
+
+The single shared connection approach completely eliminates the timing issues that caused the first-save bug, as all operations now use the same connection instance.
+
+## 2026-01-04 07:15 - Fixed First Save Not Visible in History on New Database
+
+### Problem
+
+When saving the first task in a new database on first run using 'd', the next invocation of the history table with 'h' showed nothing. It worked on the second try. This was a critical UX issue where users couldn't see their first saved task immediately after saving it.
+
+The root cause was SQLite's write-ahead logging (WAL) mode and connection handling. When `saveSessionToDB()` wrote data and immediately closed the connection with `defer db.Close()`, the transaction might not have been fully flushed to disk before `getRecentSessions()` opened a new connection to read the data. This was especially problematic for the first write in a new database.
+
+### The Fix
+
+**1. Added synchronous write mode to all database connections:**
+```go
+// Use connection string with synchronous=FULL to ensure writes are immediately flushed
+db, err := sql.Open("sqlite3", dbPath+"?_synchronous=FULL")
+```
+
+This ensures SQLite flushes writes to disk immediately rather than buffering them, making data visible to subsequent reads right away.
+
+**2. Changed connection closing in `saveSessionToDB()`:**
+- Removed `defer db.Close()` 
+- Added explicit `db.Close()` calls before returning
+- This ensures the connection is fully closed and the transaction is committed before any subsequent database operations
+
+**3. Applied consistent connection parameters:**
+- Updated `initDB()`, `saveSessionToDB()`, and `getRecentSessions()` to all use `?_synchronous=FULL`
+- Ensures consistent behavior across all database operations
+
+### Implementation Details
+
+**Before:**
+```go
+func saveSessionToDB(...) error {
+    db, err := sql.Open("sqlite3", dbPath)
+    defer db.Close()  // Connection closed after function returns
+    // ... insert logic ...
+    return nil
+}
+```
+
+**After:**
+```go
+func saveSessionToDB(...) error {
+    db, err := sql.Open("sqlite3", dbPath+"?_synchronous=FULL")
+    // ... insert logic ...
+    err = db.Close()  // Explicitly close before returning
+    return err
+}
+```
+
+### Benefits
+
+- **Immediate visibility**: First saved task appears in history immediately after saving
+- **Consistent behavior**: All database operations use the same synchronous mode
+- **Better UX**: Users can verify their tasks were saved right away
+- **Reliable**: No race conditions between write and read operations
+
+### Testing
+
+Added comprehensive test `TestFirstSaveThenImmediateHistoryRead` that:
+- Creates a new empty database
+- Saves a task using 'd' key
+- Immediately reads history using 'h' key
+- Verifies the saved task appears in the history table
+
+All 40 tests pass successfully. The fix ensures that the first write in a new database is immediately visible to subsequent reads, eliminating the need for a second attempt.
+
 ## 2026-01-02 17:15 - Fixed Database Initialization on First Run
 
 ### Problem

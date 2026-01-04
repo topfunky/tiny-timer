@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // getDBPath returns the full path to the SQLite database file
@@ -36,82 +35,72 @@ func ensureSessionsTable(db *sql.DB) error {
 }
 
 // initDB initializes the database and creates the sessions table if it doesn't exist
+// This is now a wrapper that calls initDBConnection for backward compatibility
 func initDB() error {
-	dbPath, err := getDBPath()
-	if err != nil {
-		return err
-	}
-	dbDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
-		return err
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return ensureSessionsTable(db)
+	return initDBConnection()
 }
 
 // Save a record to SQLite DB that represents a working session as counted by the timer
 func saveSessionToDB(duration int64, completed bool, title string) error {
-	dbPath, err := getDBPath()
-	if err != nil {
-		return err
-	}
-	dbDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
-		return err
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
+	db := getDB()
+	debugLog("saveSessionToDB: duration=%d, completed=%v, title=%q", duration, completed, title)
 
-	if err := ensureSessionsTable(db); err != nil {
+	// Use explicit transaction with commit to ensure write is fully committed
+	tx, err := db.Begin()
+	if err != nil {
+		debugLog("saveSessionToDB: Begin transaction failed: %v", err)
 		return err
 	}
 
 	insertSessionSQL := `INSERT INTO sessions (duration, completed, title) VALUES (?, ?, ?)`
-	_, err = db.Exec(insertSessionSQL, duration, completed, title)
+	result, err := tx.Exec(insertSessionSQL, duration, completed, title)
 	if err != nil {
+		debugLog("saveSessionToDB: Exec failed: %v", err)
+		tx.Rollback()
 		return err
 	}
 
+	rowsAffected, _ := result.RowsAffected()
+	debugLog("saveSessionToDB: Inserted %d row(s)", rowsAffected)
+
+	// Commit the transaction explicitly
+	err = tx.Commit()
+	if err != nil {
+		debugLog("saveSessionToDB: Commit failed: %v", err)
+		return err
+	}
+
+	debugLog("saveSessionToDB: Successfully saved session")
 	return nil
 }
 
 // Fetch recent sessions from the database
 func getRecentSessions(limit int) ([]session, error) {
-	dbPath, err := getDBPath()
-	if err != nil {
-		return nil, err
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
+	db := getDB()
+	debugLog("getRecentSessions: limit=%d", limit)
 
 	query := `SELECT id, datetime, duration, completed, title FROM sessions ORDER BY datetime DESC, id DESC LIMIT ?`
 	rows, err := db.Query(query, limit)
 	if err != nil {
+		debugLog("getRecentSessions: Query failed: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	var sessions []session
+	count := 0
 	for rows.Next() {
 		var s session
 		err := rows.Scan(&s.id, &s.datetime, &s.duration, &s.completed, &s.title)
 		if err != nil {
+			debugLog("getRecentSessions: Scan failed: %v", err)
 			return nil, err
 		}
 		sessions = append(sessions, s)
+		count++
 	}
 
+	debugLog("getRecentSessions: Retrieved %d session(s)", count)
 	return sessions, nil
 }
 

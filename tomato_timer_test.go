@@ -17,6 +17,9 @@ import (
 
 // setupTestDB sets up a temporary database for testing and returns the cleanup function
 func setupTestDB(t *testing.T) (string, func()) {
+	// Close any existing database connection
+	closeDBConnection()
+	
 	// Set HOME to temp directory for testing
 	originalHome := os.Getenv("HOME")
 	os.Setenv("HOME", os.TempDir())
@@ -27,8 +30,14 @@ func setupTestDB(t *testing.T) (string, func()) {
 		t.Fatalf("Failed to get DB path: %v", err)
 	}
 	
+	// Initialize the database connection for tests
+	if err := initDBConnection(); err != nil {
+		t.Fatalf("Failed to initialize DB connection: %v", err)
+	}
+	
 	// Cleanup function
 	cleanup := func() {
+		closeDBConnection()
 		os.Remove(dbPath)
 		os.Setenv("HOME", originalHome)
 	}
@@ -1111,4 +1120,60 @@ func TestMKeyResetsTimerAfterSettingDuration(t *testing.T) {
 	elapsed := time.Now().Unix() - modelTyped.startTime
 	assert.True(t, elapsed < 2, "Expected timer to be reset (elapsed time should be < 2 seconds)")
 	assert.Equal(t, int64(1200), modelTyped.targetDuration, "Expected duration to be 20 minutes (1200 seconds)")
+}
+
+// TestFirstSaveThenImmediateHistoryRead reproduces the bug where saving the first task
+// in a new database and then immediately reading history shows nothing
+func TestFirstSaveThenImmediateHistoryRead(t *testing.T) {
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Initialize database (creates new empty DB)
+	err := initDB()
+	assert.NoError(t, err)
+
+	startTime := time.Now().Unix() - 120
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      startTime,
+		targetDuration: 3600,
+		countUpMode:    true,
+		mode:           timerView,
+		title:          "First Task",
+	}
+
+	// Press 'd' to mark done and activate prompt
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ := m.Update(keyMsg)
+	modelTyped := newModel.(model)
+
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active")
+	assert.Equal(t, promptLogAndReset, modelTyped.promptType, "Expected promptType to be promptLogAndReset")
+
+	// Complete the prompt (this saves to DB and refreshes table)
+	newModel, _ = modelTyped.Update(promptMsg{title: "First Task", logDB: true})
+	modelTyped = newModel.(model)
+
+	// Immediately press 'h' to show history (this is the bug scenario)
+	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	newModel, _ = modelTyped.Update(keyMsg)
+	modelTyped = newModel.(model)
+
+	// Verify we're in table view
+	assert.Equal(t, tableView, modelTyped.mode, "Expected to switch to table view")
+
+	// Verify the table has rows (this would fail with the bug)
+	tableRows := modelTyped.table.Rows()
+	assert.NotEmpty(t, tableRows, "Expected table to have rows after saving first task")
+	assert.GreaterOrEqual(t, len(tableRows), 1, "Expected at least one row in history table")
+
+	// Verify the saved task appears in the table
+	found := false
+	for _, row := range tableRows {
+		if len(row) > 0 && row[0] == "First Task" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected 'First Task' to appear in history table")
 }
