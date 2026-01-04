@@ -20,6 +20,21 @@ func getDBPath() (string, error) {
 	return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
 }
 
+// ensureSessionsTable creates the sessions table if it doesn't exist
+// This helper function is used by both initDB() and saveSessionToDB()
+func ensureSessionsTable(db *sql.DB) error {
+	createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
+		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
+		"duration" INTEGER,
+		"completed" BOOLEAN,
+		"title" TEXT
+	);`
+
+	_, err := db.Exec(createTableSQL)
+	return err
+}
+
 // initDB initializes the database and creates the sessions table if it doesn't exist
 func initDB() error {
 	dbPath, err := getDBPath()
@@ -36,20 +51,7 @@ func initDB() error {
 	}
 	defer db.Close()
 
-	createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
-		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
-		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
-		"duration" INTEGER,
-		"completed" BOOLEAN,
-		"title" TEXT
-	);`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ensureSessionsTable(db)
 }
 
 // Save a record to SQLite DB that represents a working session as counted by the timer
@@ -68,16 +70,7 @@ func saveSessionToDB(duration int64, completed bool, title string) error {
 	}
 	defer db.Close()
 
-	createTableSQL := `CREATE TABLE IF NOT EXISTS sessions (
-		"id" INTEGER PRIMARY KEY AUTOINCREMENT,
-		"datetime" DATETIME DEFAULT CURRENT_TIMESTAMP,
-		"duration" INTEGER,
-		"completed" BOOLEAN,
-		"title" TEXT
-	);`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
+	if err := ensureSessionsTable(db); err != nil {
 		return err
 	}
 
