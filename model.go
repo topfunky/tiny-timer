@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,6 +40,35 @@ type session struct {
 	title     string
 }
 
+// keyMap defines a set of keybindings. To work for help it must satisfy
+// key.Map. It could also very easily be a map[string]key.Binding.
+type keyMap struct {
+	Done     key.Binding
+	History  key.Binding
+	Title    key.Binding
+	Minutes  key.Binding
+	Reset    key.Binding
+	Quit     key.Binding
+	Confirm  key.Binding
+	Cancel   key.Binding
+	Backspace key.Binding
+}
+
+// ShortHelp returns keybindings to be shown in the mini help view. It's part
+// of the key.Map interface.
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Done, k.History, k.Title, k.Minutes, k.Reset, k.Quit}
+}
+
+// FullHelp returns keybindings for the expanded help view. It's part of the
+// key.Map interface.
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Done, k.History, k.Title, k.Minutes, k.Reset}, // first column
+		{k.Quit}, // second column
+	}
+}
+
 type model struct {
 	progress       progress.Model
 	startTime      int64
@@ -49,6 +80,8 @@ type model struct {
 	inputBuffer    string
 	promptActive   bool
 	promptType     promptType
+	help           help.Model
+	keys           keyMap
 }
 
 // Start the event loop

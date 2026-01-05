@@ -8,12 +8,63 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 )
+
+// newTestModel creates a model with default test values, including help and keys
+func newTestModel() model {
+	keys := keyMap{
+		Done: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "done"),
+		),
+		History: key.NewBinding(
+			key.WithKeys("h"),
+			key.WithHelp("h", "history"),
+		),
+		Title: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "title"),
+		),
+		Minutes: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "minutes"),
+		),
+		Reset: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "reset"),
+		),
+		Quit: key.NewBinding(
+			key.WithKeys("q", "esc", "ctrl+c"),
+			key.WithHelp("q/esc", "quit"),
+		),
+		Confirm: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "confirm"),
+		),
+		Cancel: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "cancel"),
+		),
+		Backspace: key.NewBinding(
+			key.WithKeys("backspace"),
+			key.WithHelp("backspace", "delete"),
+		),
+	}
+	return model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix(),
+		targetDuration: 60,
+		help:           help.New(),
+		keys:           keys,
+	}
+}
 
 // setupTestDB sets up a temporary database for testing and returns the cleanup function
 func setupTestDB(t *testing.T) (string, func()) {
@@ -333,18 +384,14 @@ func TestGetRecentSessionsWithLimit(t *testing.T) {
 }
 
 func TestTableViewMode(t *testing.T) {
-	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
-		startTime:      time.Now().Unix(),
-		targetDuration: 60,
-		title:          "Test Task",
-		mode:           timerView,
-	}
+	m := newTestModel()
+	m.title = "Test Task"
+	m.mode = timerView
 
 	// Verify initial mode is timer view
 	assert.Equal(t, timerView, m.mode)
 
-	// Verify timer view is displayed
+	// Verify timer view is displayed with help text
 	view := m.View()
 	assert.Contains(t, view, "title")
 	assert.Contains(t, view, "history")
@@ -841,14 +888,12 @@ func TestCountUpModePromptWithSpaces(t *testing.T) {
 }
 
 func TestCountUpViewDisplay(t *testing.T) {
-	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
-		startTime:      time.Now().Unix() - 600,
-		targetDuration: 3600,
-		countUpMode:    true,
-		mode:           timerView,
-		title:          "My Task",
-	}
+	m := newTestModel()
+	m.startTime = time.Now().Unix() - 600
+	m.targetDuration = 3600
+	m.countUpMode = true
+	m.mode = timerView
+	m.title = "My Task"
 
 	view := m.View()
 	assert.Contains(t, view, "My Task", "Expected title to be displayed")

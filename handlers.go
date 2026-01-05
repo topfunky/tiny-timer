@@ -77,6 +77,7 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	if m.progress.Width > maxWidth {
 		m.progress.Width = maxWidth
 	}
+	m.help.Width = msg.Width
 	return m, nil
 }
 

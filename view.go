@@ -4,7 +4,40 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/bubbles/key"
 )
+
+// promptKeyMap defines keybindings for prompt mode
+type promptKeyMap struct {
+	Confirm key.Binding
+	Cancel  key.Binding
+}
+
+func (k promptKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Confirm, k.Cancel}
+}
+
+func (k promptKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Confirm, k.Cancel},
+	}
+}
+
+// tableKeyMap defines keybindings for table view mode
+type tableKeyMap struct {
+	Quit key.Binding
+}
+
+func (k tableKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Quit}
+}
+
+func (k tableKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Quit},
+	}
+}
 
 // Handler that draws the UI of the application
 func (m model) View() string {
@@ -16,7 +49,11 @@ func (m model) View() string {
 		} else {
 			promptText = "Enter task title: " + m.inputBuffer
 		}
-		return "\n" + pad + promptText + "\n\n" + pad + helpStyle("Press Enter to confirm, Esc to cancel")
+		promptKeys := promptKeyMap{
+			Confirm: m.keys.Confirm,
+			Cancel:  m.keys.Cancel,
+		}
+		return "\n" + pad + promptText + "\n\n" + pad + m.help.View(promptKeys)
 	}
 
 	if m.mode == tableView {
@@ -27,9 +64,12 @@ func (m model) View() string {
 		for i, line := range tableLines {
 			paddedTable[i] = pad + line
 		}
+		tableKeys := tableKeyMap{
+			Quit: m.keys.Quit,
+		}
 		return "\n" +
 			strings.Join(paddedTable, "\n") + "\n\n" +
-			pad + helpStyle("Press any key to return to timer")
+			pad + m.help.View(tableKeys)
 	}
 
 	elapsed := time.Now().Unix() - m.startTime
@@ -52,15 +92,8 @@ func (m model) View() string {
 		titleLine = pad + m.title + "\n\n"
 	}
 
-	var helpText string
-	if m.countUpMode {
-		helpText = "'d' done • 'h' history • 't' title • 'm' minutes • 'r' reset • any other key to quit"
-	} else {
-		helpText = "'d' done • 'h' history • 't' title • 'm' minutes • 'r' reset • any other key to quit"
-	}
-
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + renderHelpText(helpText)
+		pad + m.help.View(m.keys)
 }

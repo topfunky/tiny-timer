@@ -151,10 +151,7 @@ func buildTableView(limit int) (table.Model, error) {
 
 	// Calculate table height: header (1) + data rows + extra padding
 	// Ensure minimum height of 3 to display header + at least 1 row properly
-	tableHeight := len(rows) + 2
-	if tableHeight < 3 {
-		tableHeight = 3
-	}
+	tableHeight := max(len(rows)+2, 3)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
@@ -171,11 +168,8 @@ func buildTableView(limit int) (table.Model, error) {
 		Foreground(lipgloss.Color(colorGrey)).
 		Padding(0, 0)
 	s.Cell = s.Cell.
-		Padding(0, 0)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color(colorCream)).
-		Background(lipgloss.Color(colorGrey)).
-		Bold(false)
+		Padding(0, 0).
+		Foreground(lipgloss.Color(colorLightGrey))
 	t.SetStyles(s)
 
 	log.Printf("buildTableView: Table created with height=%d, rows=%d", t.Height(), len(t.Rows()))

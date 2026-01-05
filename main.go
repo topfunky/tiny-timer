@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -75,12 +77,53 @@ func main() {
 		targetDuration = defaultCountUpDuration
 	}
 
+	keys := keyMap{
+		Done: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "done"),
+		),
+		History: key.NewBinding(
+			key.WithKeys("h"),
+			key.WithHelp("h", "history"),
+		),
+		Title: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "title"),
+		),
+		Minutes: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "minutes"),
+		),
+		Reset: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "reset"),
+		),
+		Quit: key.NewBinding(
+			key.WithKeys("q", "esc", "ctrl+c"),
+			key.WithHelp("q/esc", "quit"),
+		),
+		Confirm: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "confirm"),
+		),
+		Cancel: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "cancel"),
+		),
+		Backspace: key.NewBinding(
+			key.WithKeys("backspace"),
+			key.WithHelp("backspace", "delete"),
+		),
+	}
+
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: targetDuration,
 		title:          *titleFlag,
 		countUpMode:    *countUpFlag,
+		help:           help.New(),
+		keys:           keys,
 	}
 
 	// Ensure database connection is closed on exit
