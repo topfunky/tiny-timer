@@ -390,7 +390,11 @@ func TestDateFormatInTableFromDatabase(t *testing.T) {
 
 	// Verify the datetime can be parsed and formatted correctly
 	s := sessions[0]
-	parsedTime, err := time.Parse("2006-01-02T15:04:05Z", s.datetime)
+	// SQLite DATETIME can store dates in different formats, try both
+	var parsedTime time.Time
+	if parsedTime, err = time.Parse("2006-01-02 15:04:05", s.datetime); err != nil {
+		parsedTime, err = time.Parse("2006-01-02T15:04:05Z", s.datetime)
+	}
 	assert.NoError(t, err, "Should be able to parse datetime from database: %s", s.datetime)
 
 	// Format it the way the table displays it
@@ -437,7 +441,13 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 		}
 		duration := formatDurationAsMMSS(s.duration)
 		datetime := s.datetime
-		if parsedTime, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+		// SQLite DATETIME can store dates in different formats, try both
+		var parsedTime time.Time
+		var err error
+		if parsedTime, err = time.Parse("2006-01-02 15:04:05", s.datetime); err != nil {
+			parsedTime, err = time.Parse("2006-01-02T15:04:05Z", s.datetime)
+		}
+		if err == nil {
 			datetime = parsedTime.Format("Monday, 2 Jan 06")
 		}
 

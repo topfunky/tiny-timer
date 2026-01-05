@@ -112,6 +112,8 @@ func buildTableView(limit int) (table.Model, error) {
 		return table.Model{}, err
 	}
 
+	log.Printf("buildTableView: Building table with %d session(s)", len(sessions))
+
 	columns := []table.Column{
 		{Title: "Title", Width: 40},
 		{Title: "Duration", Width: 10},
@@ -119,24 +121,45 @@ func buildTableView(limit int) (table.Model, error) {
 	}
 
 	rows := []table.Row{}
-	for _, s := range sessions {
+	for i, s := range sessions {
 		title := s.title
 		if title == "" {
 			title = "(no title)"
 		}
 		duration := formatDurationAsMMSS(s.duration)
 		datetime := s.datetime
-		if t, err := time.Parse("2006-01-02T15:04:05Z", s.datetime); err == nil {
+		// SQLite DATETIME can store dates in different formats:
+		// - "YYYY-MM-DD HH:MM:SS" (space-separated, from DEFAULT CURRENT_TIMESTAMP)
+		// - "YYYY-MM-DDTHH:MM:SSZ" (ISO 8601 format)
+		// Try both formats
+		var t time.Time
+		var err error
+		if t, err = time.Parse("2006-01-02 15:04:05", s.datetime); err != nil {
+			if t, err = time.Parse("2006-01-02T15:04:05Z", s.datetime); err != nil {
+				// If both fail, use raw datetime string
+				t, _ = time.Parse(time.RFC3339, s.datetime)
+			}
+		}
+		if err == nil {
 			datetime = t.Format("Monday, 2 Jan 06")
 		}
+		log.Printf("buildTableView: Row %d: title=%q, duration=%q, datetime=%q", i, title, duration, datetime)
 		rows = append(rows, table.Row{title, duration, datetime})
 	}
 
+	log.Printf("buildTableView: Created %d row(s) for table", len(rows))
+
+	// Calculate table height: header (1) + data rows + extra padding
+	// Ensure minimum height of 3 to display header + at least 1 row properly
+	tableHeight := len(rows) + 2
+	if tableHeight < 3 {
+		tableHeight = 3
+	}
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(false),
-		table.WithHeight(len(rows)),
+		table.WithHeight(tableHeight),
 	)
 
 	s := table.DefaultStyles()
@@ -155,5 +178,6 @@ func buildTableView(limit int) (table.Model, error) {
 		Bold(false)
 	t.SetStyles(s)
 
+	log.Printf("buildTableView: Table created with height=%d, rows=%d", t.Height(), len(t.Rows()))
 	return t, nil
 }
