@@ -20,15 +20,18 @@ func main() {
 	titleFlag := flag.String("title", "", "Optional title for the timer session")
 	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
 	cleanFlag := flag.Bool("clean", false, "Delete the database and exit")
-	debugFlag := flag.Bool("debug", false, "Enable debug logging to tomato-timer-debug.log")
+	debugFlag := flag.Bool("debug", false, "Enable debug logging to debug.log")
 	flag.Parse()
 
 	// Enable debug logging if flag is set
+	// tea.LogToFile configures the standard log package to write to debug.log
+	// All log.Printf() calls throughout the codebase will write to this file
 	if *debugFlag {
-		if err := setDebugEnabled(true); err != nil {
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to enable debug logging: %v\n", err)
 		} else {
-			defer closeDebugLog()
+			defer f.Close()
 		}
 	}
 

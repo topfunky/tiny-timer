@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -15,9 +14,6 @@ var (
 	// Global database connection - initialized once and reused
 	dbConnection *sql.DB
 	dbMutex      sync.Mutex
-	debugEnabled bool
-	debugLogFile *os.File
-	debugLogMutex sync.Mutex
 )
 
 // initDBConnection initializes the global database connection
@@ -65,7 +61,6 @@ func initDBConnection() error {
 	}
 
 	dbConnection = db
-	debugLog("Database connection initialized: %s", dbPath)
 	return nil
 }
 
@@ -90,65 +85,7 @@ func closeDBConnection() error {
 		return nil
 	}
 
-	debugLog("Closing database connection")
 	err := dbConnection.Close()
 	dbConnection = nil
 	return err
-}
-
-// setDebugEnabled enables or disables debug logging
-func setDebugEnabled(enabled bool) error {
-	debugLogMutex.Lock()
-	defer debugLogMutex.Unlock()
-
-	debugEnabled = enabled
-
-	if enabled {
-		// Open debug log file in current directory
-		logPath := "tomato-timer-debug.log"
-		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to open debug log file: %w", err)
-		}
-		debugLogFile = file
-		debugLog("=== Debug logging enabled ===")
-	} else {
-		if debugLogFile != nil {
-			debugLogFile.Close()
-			debugLogFile = nil
-		}
-	}
-
-	return nil
-}
-
-// debugLog writes a debug message to the log file if debug is enabled
-func debugLog(format string, args ...interface{}) {
-	if !debugEnabled {
-		return
-	}
-
-	debugLogMutex.Lock()
-	defer debugLogMutex.Unlock()
-
-	if debugLogFile == nil {
-		return
-	}
-
-	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
-	message := fmt.Sprintf(format, args...)
-	logLine := fmt.Sprintf("[%s] %s\n", timestamp, message)
-	debugLogFile.WriteString(logLine)
-	debugLogFile.Sync() // Ensure it's written immediately
-}
-
-// closeDebugLog closes the debug log file
-func closeDebugLog() {
-	debugLogMutex.Lock()
-	defer debugLogMutex.Unlock()
-
-	if debugLogFile != nil {
-		debugLogFile.Close()
-		debugLogFile = nil
-	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -86,18 +87,18 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	case promptLogAndReset:
 		// Log session to DB and start new session
 		elapsed := time.Now().Unix() - m.startTime
-		debugLog("handlePromptInput: Saving session, elapsed=%d, title=%q", elapsed, msg.title)
+		log.Printf("handlePromptInput: Saving session, elapsed=%d, title=%q", elapsed, msg.title)
 		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
-			debugLog("handlePromptInput: Error saving session: %v", err)
+			log.Printf("handlePromptInput: Error saving session: %v", err)
 			fmt.Println("Error saving session to DB:", err)
 		}
 		// Refresh history table if we are logging
-		debugLog("handlePromptInput: Building table view after save")
+		log.Printf("handlePromptInput: Building table view after save")
 		if t, err := buildTableView(10); err == nil {
 			m.table = t
-			debugLog("handlePromptInput: Table view built with %d rows", len(t.Rows()))
+			log.Printf("handlePromptInput: Table view built with %d rows", len(t.Rows()))
 		} else {
-			debugLog("handlePromptInput: Error building table view: %v", err)
+			log.Printf("handlePromptInput: Error building table view: %v", err)
 		}
 		// Reset timer for new session
 		m.startTime = time.Now().Unix()
@@ -179,14 +180,14 @@ func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "h":
 		// Show history (table view)
-		debugLog("handleCountUpModeKey: 'h' pressed, fetching history")
+		log.Printf("handleCountUpModeKey: 'h' pressed, fetching history")
 		t, err := buildTableView(10)
 		if err != nil {
-			debugLog("handleCountUpModeKey: Error fetching sessions: %v", err)
+			log.Printf("handleCountUpModeKey: Error fetching sessions: %v", err)
 			fmt.Println("Error fetching sessions:", err)
 			return m, nil
 		}
-		debugLog("handleCountUpModeKey: History fetched, %d rows", len(t.Rows()))
+		log.Printf("handleCountUpModeKey: History fetched, %d rows", len(t.Rows()))
 		m.table = t
 		m.mode = tableView
 		return m, nil
@@ -227,14 +228,14 @@ func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "h":
 		// Show history (table view)
-		debugLog("handleCountUpModeKey: 'h' pressed, fetching history")
+		log.Printf("handleCountUpModeKey: 'h' pressed, fetching history")
 		t, err := buildTableView(10)
 		if err != nil {
-			debugLog("handleCountUpModeKey: Error fetching sessions: %v", err)
+			log.Printf("handleCountUpModeKey: Error fetching sessions: %v", err)
 			fmt.Println("Error fetching sessions:", err)
 			return m, nil
 		}
-		debugLog("handleCountUpModeKey: History fetched, %d rows", len(t.Rows()))
+		log.Printf("handleCountUpModeKey: History fetched, %d rows", len(t.Rows()))
 		m.table = t
 		m.mode = tableView
 		return m, nil
