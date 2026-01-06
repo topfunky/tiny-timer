@@ -607,11 +607,15 @@ func TestResumeAfterCompletion(t *testing.T) {
 	// Initial progress should be 0
 	assert.Equal(t, 0.0, m.progress.Percent(), "Initial progress should be 0")
 
-	// Simulate a tick after resuming (which calls updatePercent)
+	// Simulate a tick after resuming
 	newModel, _ := m.Update(tickMsg(time.Now()))
+	modelTyped := newModel.(model)
 
-	// Verify the model is returned after completion
-	assert.NotNil(t, newModel, "Expected model to be returned")
+	// Verify the prompt is active
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active when resuming after completion")
+
+	// Complete the prompt
+	newModel, _ = modelTyped.Update(promptMsg{title: "Completed Task", logDB: true})
 
 	// Verify the session was saved to the database
 	db, err := sql.Open("sqlite3", tempDBPath)
@@ -621,7 +625,7 @@ func TestResumeAfterCompletion(t *testing.T) {
 	var count int
 	err = db.QueryRow("SELECT COUNT(*) FROM sessions WHERE title = ? AND completed = ?", "Completed Task", true).Scan(&count)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, count, "Expected one completed session to be saved when resuming after completion")
+	assert.Equal(t, 1, count, "Expected one completed session to be saved after prompt")
 }
 
 func TestTickAfterCompletion(t *testing.T) {
@@ -640,9 +644,13 @@ func TestTickAfterCompletion(t *testing.T) {
 
 	// Simulate a regular tick (not resume)
 	newModel, _ := m.Update(tickMsg(time.Now()))
+	modelTyped := newModel.(model)
 
-	// Verify the model is returned
-	assert.NotNil(t, newModel, "Expected model to be returned")
+	// Verify prompt is active
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active on tick after completion")
+
+	// Complete the prompt
+	newModel, _ = modelTyped.Update(promptMsg{title: "Tick After Complete", logDB: true})
 
 	// Verify the session was saved to the database
 	db, err := sql.Open("sqlite3", tempDBPath)
@@ -652,7 +660,7 @@ func TestTickAfterCompletion(t *testing.T) {
 	var count int
 	err = db.QueryRow("SELECT COUNT(*) FROM sessions WHERE title = ? AND completed = ?", "Tick After Complete", true).Scan(&count)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, count, "Expected one completed session to be saved on tick after completion")
+	assert.Equal(t, 1, count, "Expected one completed session to be saved after prompt on tick after completion")
 }
 
 func TestCtrlZSuspendsInTimerView(t *testing.T) {
@@ -1231,4 +1239,28 @@ func TestFirstSaveThenImmediateHistoryRead(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "Expected 'First Task' to appear in history table")
+}
+
+func TestTimerEndPromptsForTitle(t *testing.T) {
+	// Set up a temporary database path
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create a timer that is just about to finish
+	m := model{
+		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		startTime:      time.Now().Unix() - 61,
+		targetDuration: 60,
+		title:          "Original Title",
+		mode:           timerView,
+	}
+
+	// Simulate a tick
+	newModel, _ := m.Update(tickMsg(time.Now()))
+	modelTyped := newModel.(model)
+
+	// Verify that instead of quitting, it activated the prompt
+	assert.True(t, modelTyped.promptActive, "Expected prompt to be active when timer ends")
+	assert.Equal(t, promptLogAndReset, modelTyped.promptType, "Expected promptType to be promptLogAndReset")
+	assert.Equal(t, "Original Title", modelTyped.inputBuffer, "Expected input buffer to be pre-filled with current title")
 }

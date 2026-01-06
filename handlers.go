@@ -60,12 +60,11 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 			fmt.Println("Error sending notification:", err)
 		}
 
-		// Save the session to the SQLite DB on completion
-		if err := saveSessionToDB(m.targetDuration, true, m.title); err != nil {
-			fmt.Println("Error saving session to DB:", err)
-		}
-
-		return m, tea.Quit
+		// Activate prompt for title instead of quitting immediately
+		m.promptActive = true
+		m.promptType = promptLogAndReset
+		m.inputBuffer = m.title
+		return m, nil
 	}
 
 	cmd := m.progress.SetPercent(percentCompleted)

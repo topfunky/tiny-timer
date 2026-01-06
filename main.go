@@ -7,6 +7,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -23,6 +25,20 @@ func main() {
 	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
 	cleanFlag := flag.Bool("clean", false, "Delete the database and exit")
 	debugFlag := flag.Bool("debug", false, "Enable debug logging to debug.log")
+
+	// Pre-process arguments to allow positional argument (minutes) before flags
+	// flag.Parse() stops at the first non-flag argument.
+	// We check if the first argument is a number and move it to the end if so.
+	args := os.Args[1:]
+	if len(args) > 0 {
+		if _, err := strconv.ParseInt(args[0], 10, 64); err == nil {
+			// First arg is a number, move it to the end so flag.Parse() can see the flags
+			minutes := args[0]
+			newArgs := append(args[1:], minutes)
+			os.Args = append([]string{os.Args[0]}, newArgs...)
+		}
+	}
+
 	flag.Parse()
 
 	// Enable debug logging if flag is set
@@ -35,6 +51,9 @@ func main() {
 		} else {
 			defer f.Close()
 		}
+	} else {
+		// Silence all log output in normal mode
+		log.SetOutput(io.Discard)
 	}
 
 	if *cleanFlag {
