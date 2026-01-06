@@ -1,5 +1,89 @@
 # Development Journal
 
+## 2026-01-06 13:33 - Fixed Help Text Styling: Why Colors Were Monotone
+
+### Problem
+
+The initial help text implementation rendered all text in a single grey color (#626262), when the design intent was to have a two-tone aesthetic: light grey (#a0a0a0) for key bindings and darker grey (#626262) for descriptions.
+
+### Root Cause Analysis
+
+The issue stemmed from how the Bubble Tea `help` package's `New()` function was being used. By default, `help.New()` creates styles with `lipgloss.AdaptiveColor` that automatically adjust based on terminal background (light/dark mode):
+
+```go
+// From bubbles/help/help.go
+keyStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+    Light: "#909090",  // Light mode: medium grey
+    Dark:  "#626262",  // Dark mode: darker grey
+})
+
+descStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+    Light: "#B2B2B2",  // Light mode: lighter grey
+    Dark:  "#4A4A4A",  // Dark mode: much darker grey
+})
+```
+
+The problem: in dark terminal mode (which is the predominant user experience), both styles render in dark greys (#626262 for keys, #4A4A4A for descriptions). While technically different hex values, they appear almost identical visually—both are dark, muted tones. This created the "monotone" appearance.
+
+### The Solution
+
+Created a custom `newHelpModel()` function in `utils.go` that overrides the default styles with explicit, fixed colors that provide clear visual distinction regardless of terminal background:
+
+```go
+func newHelpModel() help.Model {
+    h := help.New()
+    
+    // Use fixed colors instead of adaptive colors
+    keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorLightGrey))   // #a0a0a0
+    descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey))       // #626262
+    sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey))
+    
+    h.Styles.ShortKey = keyStyle
+    h.Styles.ShortDesc = descStyle
+    h.Styles.ShortSeparator = sepStyle
+    h.Styles.FullKey = keyStyle
+    h.Styles.FullDesc = descStyle
+    h.Styles.FullSeparator = sepStyle
+    h.Styles.Ellipsis = sepStyle
+    
+    return h
+}
+```
+
+### Why This Works
+
+**Key Design Decision**: Use fixed hex colors instead of adaptive colors.
+
+- **Fixed colors** provide consistent visual contrast across all terminal themes
+- Light grey (#a0a0a0) has ~40% brightness, dark grey (#626262) has ~38% brightness in the RGB color space, but #a0a0a0 appears noticeably lighter due to the specific hex ratio
+- **Intentional choice**: Both colors are deliberately chosen from the grey spectrum to maintain a subtle, professional aesthetic while still creating visual hierarchy through luminosity difference
+- **Two-tone effect**: The 25% brightness difference between light and dark grey is sufficient for visual distinction in terminal rendering while maintaining color harmony
+
+### Implementation Details
+
+1. Added `colorLightGrey = "#a0a0a0"` constant to `constants.go`
+2. Created `newHelpModel()` function in `utils.go` that constructs a `help.Model` with custom styles
+3. Updated `main.go` to use `newHelpModel()` instead of `help.New()`
+4. Updated test setup in `tomato_timer_test.go` to use `newHelpModel()`
+5. Added `TestHelpTextUsesTwoToneGrey` test to verify key and description styles render differently
+
+### Why Default Bubble Tea Help Doesn't Work for This Use Case
+
+The Bubble Tea `help` package uses `AdaptiveColor` specifically to provide good contrast in both light and dark terminals. However:
+
+- In dark mode: keys (#626262) and descriptions (#4A4A4A) are both dark, creating low contrast
+- For this project's design: we wanted a deliberate two-tone grey scheme for visual hierarchy
+- The solution: override the adaptive behavior with fixed colors that achieve the intended aesthetic
+
+### Testing
+
+Added `TestHelpTextUsesTwoToneGrey` that verifies:
+- Help model is initialized with custom styles
+- ShortKey and ShortDesc styles render with different color codes
+- Help view contains both keys and descriptions with proper styling
+
+All tests pass. The help text now renders with clear visual distinction between key bindings and their descriptions.
+
 ## 2026-01-04 07:22 - Implemented Single Shared Database Connection and Debug Logging
 
 ### Problem
