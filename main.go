@@ -92,7 +92,7 @@ func main() {
 	}
 
 	targetDuration := targetDurationInMinutes * 60
-	if *countUpFlag {
+	if *countUpFlag && flag.NArg() == 0 {
 		targetDuration = defaultCountUpDuration
 	}
 

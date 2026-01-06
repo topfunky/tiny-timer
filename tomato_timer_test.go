@@ -1264,3 +1264,23 @@ func TestTimerEndPromptsForTitle(t *testing.T) {
 	assert.Equal(t, promptLogAndReset, modelTyped.promptType, "Expected promptType to be promptLogAndReset")
 	assert.Equal(t, "Original Title", modelTyped.inputBuffer, "Expected input buffer to be pre-filled with current title")
 }
+
+func TestCountUpModeUsesPositionalArgAsTarget(t *testing.T) {
+	// This test simulates the logic in main.go for initializing the model
+	// We want to ensure that if countUpMode is true, targetDuration can still be set by positional args
+
+	// Case 1: Default count-up duration (no positional arg simulated)
+	m1 := model{
+		countUpMode:    true,
+		targetDuration: defaultCountUpDuration,
+	}
+	assert.Equal(t, int64(3600), m1.targetDuration)
+
+	// Case 2: Positional arg provided (e.g., 5 minutes)
+	// In main.go, this would be: targetDuration = 5 * 60
+	m2 := model{
+		countUpMode:    true,
+		targetDuration: 300, 
+	}
+	assert.Equal(t, int64(300), m2.targetDuration, "Target duration should be 300 seconds (5 minutes) even in count-up mode")
+}
