@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
@@ -141,7 +140,7 @@ func main() {
 		targetDuration: targetDuration,
 		title:          *titleFlag,
 		countUpMode:    *countUpFlag,
-		help:           help.New(),
+		help:           newHelpModel(),
 		keys:           keys,
 	}
 

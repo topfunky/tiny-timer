@@ -5,6 +5,9 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
+
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // A display helper for formatting the time remaining in the timer
@@ -24,4 +27,26 @@ func sendNotification(title, message string) error {
 	}
 	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s" with title "%s" sound name "Bottle"`, message, title))
 	return cmd.Run()
+}
+
+// newHelpModel creates a help model with custom two-tone grey styling:
+// - Keys (single letters) render in light grey (#a0a0a0)
+// - Descriptions render in dark grey (#626262)
+func newHelpModel() help.Model {
+	h := help.New()
+	
+	// Customize styles for two-tone grey
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorLightGrey))
+	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey))
+	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorGrey))
+	
+	h.Styles.ShortKey = keyStyle
+	h.Styles.ShortDesc = descStyle
+	h.Styles.ShortSeparator = sepStyle
+	h.Styles.FullKey = keyStyle
+	h.Styles.FullDesc = descStyle
+	h.Styles.FullSeparator = sepStyle
+	h.Styles.Ellipsis = sepStyle
+	
+	return h
 }
