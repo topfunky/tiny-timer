@@ -25,6 +25,16 @@ func main() {
 	cleanFlag := flag.Bool("clean", false, "Delete the database and exit")
 	debugFlag := flag.Bool("debug", false, "Enable debug logging to debug.log")
 
+	// Customize usage to include positional argument
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [minutes] [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Positional arguments:\n")
+		fmt.Fprintf(os.Stderr, "  minutes\n")
+		fmt.Fprintf(os.Stderr, "    \tDuration in minutes for the timer (default: 25)\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+	}
+
 	// Pre-process arguments to allow positional argument (minutes) before flags
 	// flag.Parse() stops at the first non-flag argument.
 	// We check if the first argument is a number and move it to the end if so.

@@ -97,6 +97,10 @@ This is critical because:
 
 ## Code Patterns & Conventions
 
+### Markdown
+
+- Write all ordered lists starting with `1.`
+
 ### File Structure
 - Multiple `.go` files organized by responsibility (model, handlers, view, database, utils, constants)
 - All files are in the same package (main package)
@@ -132,25 +136,6 @@ This is critical because:
 - Uses `testify/assert` for readable assertions
 - **Database tests**: Create temp SQLite DB in temp dir for isolation
 - **Time-based tests**: Use `testing.Testing()` to skip platform-specific code (e.g., macOS notifications)
-
-### Test Examples
-```go
-// Setup model with specific state
-m := model{
-  progress:       progress.New(...),
-  startTime:      time.Now().Unix(),
-  targetDuration: 3600,
-  countUpMode:    true,
-}
-
-// Trigger action
-newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
-modelTyped := newModel.(model)
-
-// Assert outcomes
-assert.Equal(t, "", modelTyped.title, "Title should be blank after logging")
-assert.NoError(t, err)
-```
 
 ### Important: Test Always for User-Facing Changes
 - Any change to key handling must include key binding tests
@@ -255,22 +240,6 @@ Before submitting changes:
 - [ ] Error handling present and logged (don't silently fail)
 - [ ] JOURNAL.md updated for significant work
 
-## Dependencies
-
-### Core TUI Framework
-- `github.com/charmbracelet/bubbletea` v1.2.4+ - Event loop framework
-- `github.com/charmbracelet/bubbles` v0.20.0+ - UI components (progress, table)
-- `github.com/charmbracelet/lipgloss` v1.0.0+ - Terminal styling
-
-### Database
-- `github.com/mattn/go-sqlite3` v1.14.24+ - SQLite driver
-
-### Testing
-- `github.com/stretchr/testify` v1.10.0+ - Assertions and test helpers
-
-### Language
-- Go 1.23.4+ (check go.mod for exact version)
-
 ## Documentation
 
 - **JOURNAL.md**: Historical record of significant work (debugging, features, fixes)
@@ -280,24 +249,4 @@ Before submitting changes:
 - **README.md**: User-facing documentation (installation, usage, features)
 - **AGENTS.md** (this file): Developer guidelines for working in the codebase
 
-## Debugging Tips
 
-### Logging
-- Print errors with `fmt.Println()` - they appear in terminal
-- Use `fmt.Printf()` for debugging during development (remove before committing)
-- **Gotcha**: Error handling might hide issues - always check returned errors
-
-### Testing Specific Features
-```bash
-# Run single test
-go test -run TestCountUpModePromptLogAndReset -v
-
-# Run with timeout and race detector
-go test -race -timeout 30s -v
-```
-
-### Common Issues
-- **Panic on nil**: Always check error returns and nil assertions
-- **Timer seems wrong**: Verify `startTime` isn't being modified
-- **Database errors**: Check directory exists and file permissions
-- **UI not updating**: Verify `cmd := m.progress.SetPercent(...)` or `tea.Batch()` returns

@@ -5,7 +5,7 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 ## Features
 
 - Animated progress bar
-- Countdown timer
+- Countdown timer (defaults to `25` minutes)
 - Customizable timer duration
 
 ## Installation
@@ -47,6 +47,47 @@ Or specify a custom duration in minutes:
 tiny-timer 5
 ```
 
+## CLI Flags
+
+The following command-line flags are available:
+
+### Positional Arguments
+
+- **`[minutes]`** - Optional duration in minutes for the timer. If not specified, defaults to 25 minutes. Can be placed before or after flags.
+
+  ```bash
+  tiny-timer 5
+  tiny-timer -count-up 10
+  ```
+
+### Flags
+
+- **`-title <string>`** - Set an optional title for the timer session. Useful for labeling your work sessions.
+
+  ```bash
+  tiny-timer -title "Writing documentation"
+  tiny-timer 30 -title "Code review"
+  ```
+
+- **`-count-up`** - Enable count-up mode instead of countdown. In this mode, the timer tracks elapsed time and allows you to log tasks to the SQLite database. Default duration is 1 hour (for progress bar scaling).
+
+  ```bash
+  tiny-timer -count-up
+  tiny-timer -count-up -title "Project planning"
+  ```
+
+- **`-clean`** - Delete the SQLite database and exit. Useful for resetting your session history.
+
+  ```bash
+  tiny-timer -clean
+  ```
+
+- **`-debug`** - Enable debug logging to `debug.log` file. All log output will be written to this file for troubleshooting.
+
+  ```bash
+  tiny-timer -debug
+  ```
+
 ## Development
 
 ### Testing Releases with GoReleaser
@@ -75,14 +116,6 @@ For a full dry-run that also validates publishing (without actually publishing):
 ```bash
 goreleaser release --snapshot --skip-publish
 ```
-
-## Dependencies
-
-This project uses the following Go packages:
-
-- [github.com/charmbracelet/bubbles](https://github.com/charmbracelet/bubbles)
-- [github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
-- [github.com/charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss)
 
 ## License
 
