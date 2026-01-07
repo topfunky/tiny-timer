@@ -1,4 +1,4 @@
-module tomato-timer
+module tiny-timer
 
 go 1.23.4
 

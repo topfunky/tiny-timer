@@ -17,7 +17,7 @@ func getDBPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
+	return filepath.Join(homeDir, ".config", "tiny-timer", "tiny-timer.db"), nil
 }
 
 // ensureSessionsTable creates the sessions table if it doesn't exist

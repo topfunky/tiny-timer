@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Tomato Timer CLI** is a command-line Pomodoro timer written in Go. It features:
+**Tiny Timer CLI** is a command-line Pomodoro timer written in Go. It features:
 - Countdown timer mode (default): tracks time remaining with an animated progress bar
 - Count-up mode (`--count-up`): tracks elapsed time and allows logging tasks to SQLite
 - TUI built with Bubble Tea framework (bubbletea + bubbles + lipgloss)
@@ -25,7 +25,7 @@ Never run `git` for any reason. Only use `jj`.
 
 ### Build & Install
 ```bash
-make build      # Build binary (outputs: tomato-timer)
+make build      # Build binary (outputs: tiny-timer)
 make install    # Install to GOPATH/bin
 make clean      # Clean build cache and test cache
 ```
@@ -52,7 +52,7 @@ The codebase uses multiple files organized by responsibility:
 - **`database.go`**: Database operations
 - **`utils.go`**: Helper functions (formatting, notifications)
 - **`constants.go`**: Constants and configuration values
-- **`tomato_timer_test.go`**: Comprehensive test suite
+- **`tiny_timer_test.go`**: Comprehensive test suite
   - Follows Go testing conventions (`*_test.go` suffix)
   - Uses `testify` assertions
   - Tests organized by feature with clear names
@@ -160,7 +160,7 @@ assert.NoError(t, err)
 
 ## Database Schema
 
-SQLite database stored at `~/.config/tomato-timer/tomato-timer.db`:
+SQLite database stored at `~/.config/tiny-timer/tiny-timer.db`:
 ```sql
 CREATE TABLE sessions (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +179,7 @@ CREATE TABLE sessions (
 ## User Interaction Modes
 
 ### Countdown Mode (default)
-- **Start**: `tomato-timer [minutes]` (default 25)
+- **Start**: `tiny-timer [minutes]` (default 25)
 - **Keys**: 
   - 'r' = reset timer
   - 't' = show recent sessions table
@@ -188,7 +188,7 @@ CREATE TABLE sessions (
 - **On completion**: Saves session to DB with elapsed duration
 
 ### Count-Up Mode (`--count-up` flag)
-- **Start**: `tomato-timer --count-up [--title "Task"]`
+- **Start**: `tiny-timer --count-up [--title "Task"]`
 - **Default duration**: 1 hour (3600s) - just for progress bar scaling
 - **Keys**:
   - 'd' = prompt for title, log session, reset timer to 0:00
@@ -232,7 +232,7 @@ CREATE TABLE sessions (
 - **Gotcha**: Adding new features shouldn't break this "few keys" philosophy
 
 ### 6. Database Path
-- Stored at `os.Getenv("HOME")/.config/tomato-timer/tomato-timer.db`
+- Stored at `os.Getenv("HOME")/.config/tiny-timer/tiny-timer.db`
 - Directory is created automatically if missing: `os.MkdirAll(..., os.ModePerm)`
 - **Gotcha**: Tests use temp db path (set in test via os.Setenv) to avoid polluting user DB
 

@@ -1,4 +1,4 @@
-# Tomato Timer CLI
+# Tiny Timer CLI
 
 A simple command-line application to run a [Pomodoro](https://www.pomodorotechnique.com) timer with an animated progress bar using the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
@@ -13,8 +13,8 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/topfunky/tomato-timer.git
-cd tomato-timer
+git clone https://github.com/topfunky/tiny-timer.git
+cd tiny-timer
 ```
 
 1. Build and install the application to your `GOPATH/bin`:
@@ -28,13 +28,13 @@ make install
 Run the application with the default duration (25 minutes):
 
 ```bash
-tomato-timer
+tiny-timer
 ```
 
 Or specify a custom duration in minutes:
 
 ```bash
-tomato-timer 5
+tiny-timer 5
 ```
 
 ## Dependencies

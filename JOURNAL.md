@@ -64,7 +64,7 @@ func newHelpModel() help.Model {
 1. Added `colorLightGrey = "#a0a0a0"` constant to `constants.go`
 2. Created `newHelpModel()` function in `utils.go` that constructs a `help.Model` with custom styles
 3. Updated `main.go` to use `newHelpModel()` instead of `help.New()`
-4. Updated test setup in `tomato_timer_test.go` to use `newHelpModel()`
+4. Updated test setup in `tiny_timer_test.go` to use `newHelpModel()`
 5. Added `TestHelpTextUsesTwoToneGrey` test to verify key and description styles render differently
 
 ### Why Default Bubble Tea Help Doesn't Work for This Use Case
@@ -120,7 +120,7 @@ func initDBConnection() error {
 - Removed file system sync code (no longer needed)
 
 **3. Added debug logging system:**
-- `--debug` flag enables logging to `tomato-timer-debug.log` in current directory
+- `--debug` flag enables logging to `tiny-timer-debug.log` in current directory
 - Timestamped log entries for all database operations
 - Logs include: connection initialization, save operations, read operations, row counts, errors
 - Thread-safe logging with mutex protection
@@ -183,11 +183,11 @@ func getRecentSessions(...) ([]session, error) {
 
 ### Debug Logging
 
-When run with `--debug` flag, the application writes detailed logs to `tomato-timer-debug.log`:
+When run with `--debug` flag, the application writes detailed logs to `tiny-timer-debug.log`:
 
 ```
 [2026-01-04 07:22:15.123] === Debug logging enabled ===
-[2026-01-04 07:22:15.124] Database connection initialized: /home/user/.config/tomato-timer/tomato-timer.db
+[2026-01-04 07:22:15.124] Database connection initialized: /home/user/.config/tiny-timer/tiny-timer.db
 [2026-01-04 07:22:30.456] handlePromptInput: Saving session, elapsed=120, title="First Task"
 [2026-01-04 07:22:30.457] saveSessionToDB: duration=120, completed=true, title="First Task"
 [2026-01-04 07:22:30.458] saveSessionToDB: Inserted 1 row(s)
@@ -348,7 +348,7 @@ The database path was constructed using `os.Getenv("HOME")` which had several is
 1. Could return an empty string if `$HOME` environment variable is not set
 2. Not cross-platform (doesn't work properly on Windows)
 3. No error handling if home directory can't be determined
-4. Would silently create invalid paths like `/.config/tomato-timer/tomato-timer.db` (in root directory)
+4. Would silently create invalid paths like `/.config/tiny-timer/tiny-timer.db` (in root directory)
 
 ### The Fix
 
@@ -367,7 +367,7 @@ func getDBPath() (string, error) {
     if err != nil {
         return "", err
     }
-    return filepath.Join(homeDir, ".config", "tomato-timer", "tomato-timer.db"), nil
+    return filepath.Join(homeDir, ".config", "tiny-timer", "tiny-timer.db"), nil
 }
 ```
 
@@ -409,7 +409,7 @@ Build succeeds with no errors or warnings.
 
 ### Overview
 
-Refactored the codebase from a single monolithic `tomato_timer.go` file (562 lines) into a modular structure with separate files for better readability and discoverability.
+Refactored the codebase from a single monolithic `tiny_timer.go` file (562 lines) into a modular structure with separate files for better readability and discoverability.
 
 ### File Structure
 
