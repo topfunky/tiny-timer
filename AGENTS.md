@@ -9,15 +9,15 @@
 - SQLite persistence for task logging
 - Cross-platform support (macOS notifications on darwin)
 
-## Version Control
-
-See [`.ai/agents/VERSION_CONTROL.md`](.ai/agents/VERSION_CONTROL.md) for comprehensive version control guidelines using Jujutsu (jj).
-
 ## Essential Commands
 
 ### Version control
+
+Generate a summary and commit to VCS with `jj`:
+
 ```bash
-jj show
+jj status
+jj diff
 jj commit -m "feat: implement keyboard shortcuts"
 ```
 
