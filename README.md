@@ -117,6 +117,12 @@ For a full dry-run that also validates publishing (without actually publishing):
 goreleaser release --snapshot --skip-publish
 ```
 
+### Record demo video with VHS
+
+```nushell
+docker run --rm -v ($env.PWD):/vhs ghcr.io/charmbracelet/vhs new my.tape
+```
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
