@@ -1,4 +1,4 @@
-.PHONY: build install clean test list
+.PHONY: build install clean test list release-dry-run
 
 # Display available tasks
 list:
@@ -20,3 +20,8 @@ clean:
 test:
 	@echo "Running tests..."
 	go test ./...
+
+# Test release process with GoReleaser (dry-run)
+release-dry-run:
+	@echo "Running GoReleaser dry-run..."
+	goreleaser release --snapshot --skip-publish --clean

@@ -10,6 +10,16 @@ A simple command-line application to run a [Pomodoro](https://www.pomodorotechni
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+Install from the topfunky tap:
+
+```bash
+brew install topfunky/tap/tiny-timer
+```
+
+### From Source
+
 1. Clone the repository:
 
 ```bash
@@ -17,7 +27,7 @@ git clone https://github.com/topfunky/tiny-timer.git
 cd tiny-timer
 ```
 
-1. Build and install the application to your `GOPATH/bin`:
+2. Build and install the application to your `GOPATH/bin`:
 
 ```bash
 make install
@@ -37,6 +47,35 @@ Or specify a custom duration in minutes:
 tiny-timer 5
 ```
 
+## Development
+
+### Testing Releases with GoReleaser
+
+To test the release process without creating an actual release, use the make target:
+
+```bash
+make release-dry-run
+```
+
+Or run GoReleaser directly:
+
+```bash
+goreleaser release --snapshot --skip-publish --clean
+```
+
+This will:
+- Build binaries for all configured platforms (Linux, macOS, Windows)
+- Create archives and checksums
+- Generate the Homebrew formula
+- Skip publishing to GitHub
+- Clean up previous build artifacts
+
+For a full dry-run that also validates publishing (without actually publishing):
+
+```bash
+goreleaser release --snapshot --skip-publish
+```
+
 ## Dependencies
 
 This project uses the following Go packages:
@@ -47,6 +86,8 @@ This project uses the following Go packages:
 
 ## License
 
-This project is currently private and has no license. It includes sample code from the Bubbles project.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+It includes sample code from the Bubbles project.
 
 [Pomodoro](https://www.pomodorotechnique.com) is a trademark of Francesco Cirillo. The Pomodoro Technique is a time management method developed by Cirillo in the late 1980s.
