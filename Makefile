@@ -1,4 +1,4 @@
-.PHONY: build install clean test list release-dry-run
+.PHONY: build install clean test list release-dry-run install-deps
 
 # Display available tasks
 list:
@@ -20,6 +20,12 @@ clean:
 test:
 	@echo "Running tests..."
 	go test ./...
+
+# Install development dependencies
+install-deps:
+	@echo "Installing development dependencies..."
+	@go install github.com/goreleaser/goreleaser@latest
+	@echo "Dependencies installed successfully!"
 
 # Test release process with GoReleaser (dry-run)
 release-dry-run:
