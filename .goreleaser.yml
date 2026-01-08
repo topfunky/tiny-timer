@@ -40,9 +40,7 @@ changelog:
 
 brews:
   - name: tiny-timer
-    tap:
-      owner: topfunky
-      name: tap
+    tap: topfunky/tap
     homepage: https://github.com/topfunky/tiny-timer
     description: A simple command-line Pomodoro timer with an animated progress bar
     license: MIT
