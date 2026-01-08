@@ -2,6 +2,8 @@
 
 A simple command-line application to run a [Pomodoro](https://www.pomodorotechnique.com) timer with an animated progress bar using the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
+![Tiny Timer application demo](https://vhs.charm.sh/vhs-Bc93HZoHL5g7S16LmkgB9.gif)
+
 ## Features
 
 - Animated progress bar
@@ -120,7 +122,7 @@ goreleaser release --snapshot --skip-publish
 ### Record demo video with VHS
 
 ```nushell
-docker run --rm -v ($env.PWD):/vhs ghcr.io/charmbracelet/vhs new my.tape
+docker run --rm -v ($env.PWD):/vhs ghcr.io/charmbracelet/vhs vhs/basic.tape
 ```
 
 ## License
