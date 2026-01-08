@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # Use macOS runner because it can cross-compile CGO to Linux/Windows,
+    # but Linux cannot cross-compile CGO to macOS (SQLite requires CGO)
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
