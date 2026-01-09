@@ -119,6 +119,20 @@ For a full dry-run that also validates publishing (without actually publishing):
 goreleaser release --snapshot --skip-publish
 ```
 
+### Release with GitHub
+
+Create a release at GitHub:
+
+```sh
+gh release create v1.2.3 --title "v1.2.3" --notes "this is a public release"
+```
+
+Or use the short version, with interactive prompts.
+
+```sh
+gh release create v4.5.6
+```
+
 ### Record demo video with VHS
 
 ```nushell
