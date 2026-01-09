@@ -26,7 +26,7 @@ func TestInitDB(t *testing.T) {
 	assert.NoError(t, err, "Database file should exist after initDB")
 
 	// Verify the sessions table was created
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -87,7 +87,7 @@ func TestSaveSessionToDB(t *testing.T) {
 		assert.NoError(t, err, "saveSessionToDB(%d, %v, %s)", test.duration, test.completed, test.title)
 
 		// Verify the session was saved correctly
-		db, err := sql.Open("sqlite3", tempDBPath)
+		db, err := sql.Open("sqlite", tempDBPath)
 		assert.NoError(t, err)
 		defer db.Close()
 
@@ -112,7 +112,7 @@ func TestSaveSessionToDBWithTitle(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify the title was saved correctly
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -135,7 +135,7 @@ func TestSaveSessionToDBWithoutTitle(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify the empty title was saved correctly
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -155,7 +155,7 @@ func TestDatabaseSchemaHasTitleColumn(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify the title column exists
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 

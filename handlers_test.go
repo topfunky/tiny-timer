@@ -64,7 +64,7 @@ func TestResumeAfterCompletion(t *testing.T) {
 	newModel, _ = modelTyped.Update(promptMsg{title: "Completed Task", logDB: true})
 
 	// Verify the session was saved to the database
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -99,7 +99,7 @@ func TestTickAfterCompletion(t *testing.T) {
 	newModel, _ = modelTyped.Update(promptMsg{title: "Tick After Complete", logDB: true})
 
 	// Verify the session was saved to the database
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -272,7 +272,7 @@ func TestCountUpModePromptLogAndReset(t *testing.T) {
 	assert.False(t, modelTyped.promptActive, "Expected prompt to be inactive after completion")
 
 	// Verify session was saved to DB
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -446,7 +446,7 @@ func TestDKeyMarksDoneInCountdownMode(t *testing.T) {
 	modelTyped = newModel.(model)
 
 	// Verify session was saved to DB
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 
@@ -483,7 +483,7 @@ func TestDKeyMarksDoneInCountUpMode(t *testing.T) {
 	modelTyped = newModel.(model)
 
 	// Verify session was saved to DB
-	db, err := sql.Open("sqlite3", tempDBPath)
+	db, err := sql.Open("sqlite", tempDBPath)
 	assert.NoError(t, err)
 	defer db.Close()
 

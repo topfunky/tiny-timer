@@ -159,7 +159,6 @@ CREATE TABLE sessions (
 ### Database Operations
 - **Save**: `saveSessionToDB(duration, completed, title)` - creates table if missing
 - **Read**: `getRecentSessions(limit)` - returns sorted by datetime DESC
-- Accessed via SQLite with `database/sql` and `mattn/go-sqlite3` driver
 
 ## User Interaction Modes
 

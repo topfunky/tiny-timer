@@ -1,5 +1,62 @@
 # Development Journal
 
+## 2026-01-09 05:30 - Migrated to CGO-Free SQLite and Updated Dependencies
+
+### Problem
+
+The build required CGO (C compiler toolchain) due to the `github.com/mattn/go-sqlite3` dependency. This created cross-compilation challenges and bloated release binaries. Additionally, dependencies were outdated (go 1.23.4 → 1.24.2 available).
+
+### Solution Implemented
+
+1. **Replaced SQLite driver**: Migrated from `mattn/go-sqlite3` (CGO-dependent) to `modernc.org/sqlite` (pure Go)
+   - Changed driver import in `db_connection.go`: `_ "github.com/mattn/go-sqlite3"` → `_ "modernc.org/sqlite"`
+   - Changed driver name in `sql.Open()`: `"sqlite3"` → `"sqlite"`
+   - Updated all test files (`database_test.go`, `handlers_test.go`) to use new driver name
+
+2. **Updated all Go dependencies** to latest versions:
+   - charmbracelet/bubbles: 0.20.0 → 0.21.0 ✓
+   - charmbracelet/bubbletea: 1.2.4 → 1.3.10 ✓
+   - charmbracelet/lipgloss: 1.0.0 → 1.1.0 ✓
+   - modernc.org/sqlite: 1.29.8 → 1.43.0 ✓
+   - Go version: 1.23.4 → 1.24.2
+
+3. **Set CGO_ENABLED=0 in CI/CD workflows**:
+   - `.github/workflows/go.yml`: Added `CGO_ENABLED=0` to test and build steps
+   - `.github/workflows/release.yml`: Added `CGO_ENABLED=0` to test step
+   - `.goreleaser.yml`: Already had `CGO_ENABLED=0` configured
+   - Updated workflow Go version to 1.24 to match current dependencies
+
+4. **Verified clean builds**:
+   - Binary is statically linked: `file tiny-timer` → "statically linked"
+   - All tests pass with CGO_ENABLED=0 ✓
+   - GitHub Actions (`act`) workflow validation passes ✓
+
+### Impact
+
+- **Build simplification**: No longer requires C compiler or CGO
+- **Cleaner cross-compilation**: Can build for all platforms (Linux, macOS, Windows, ARM64) without platform-specific toolchain setup
+- **Smaller binaries**: Statically linked modern pure-Go SQLite driver
+- **CI/CD reliability**: GitHub Actions workflows now explicit about CGO disable
+- **Database compatibility**: Fully compatible with existing SQLite schema and queries
+
+### Files Changed
+
+- `go.mod`: Updated module version and dependencies
+- `db_connection.go`: Driver and import changes
+- `database_test.go`: Updated 5 test instances to use new driver
+- `handlers_test.go`: Updated 5 test instances to use new driver
+- `.github/workflows/go.yml`: Updated Go version (1.24), added CGO_ENABLED=0
+- `.github/workflows/release.yml`: Updated comment, added CGO_ENABLED=0 to tests
+
+### Testing
+
+```bash
+CGO_ENABLED=0 make clean build test
+# Result: All tests pass ✓
+# Binary: Statically linked ✓
+# Workflows: Act validation passes ✓
+```
+
 ## 2026-01-06 13:33 - Fixed Help Text Styling: Why Colors Were Monotone
 
 ### Problem

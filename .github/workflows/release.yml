@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   release:
-    # Use macOS runner because it can cross-compile CGO to Linux/Windows,
-    # but Linux cannot cross-compile CGO to macOS (SQLite requires CGO)
+    # Uses macos-latest runner as standard practice for releases
+    # CGO_ENABLED=0 means the app builds cleanly without C dependencies (SQLite via modernc.org)
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -25,7 +25,7 @@ jobs:
           go-version: stable
 
       - name: Run tests
-        run: go test -v ./...
+        run: CGO_ENABLED=0 go test -v ./...
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

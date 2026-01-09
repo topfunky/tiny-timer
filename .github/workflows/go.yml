@@ -19,15 +19,15 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.23'
+        go-version: '1.24'
 
     - name: Install dependencies
       run: |
         go get .
 
     - name: Test
-      run: make test
+      run: CGO_ENABLED=0 make test
 
     - name: Build
-      run: make build
+      run: CGO_ENABLED=0 make build
 
