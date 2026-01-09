@@ -23,6 +23,8 @@ jj commit -m "feat: implement keyboard shortcuts"
 
 Never run `git` for any reason. Only use `jj`.
 
+Trust that the commit was effective; do not run any follow up commands unless the commit fails.
+
 ### Build & Install
 ```bash
 make build      # Build binary (outputs: tiny-timer)
