@@ -138,28 +138,46 @@ func (m *StatusCmp) View() string {
 
 func (m *StatusCmp) infoMsg() string {
 	t := NewTheme()
-	message := ""
-	infoType := ""
+
+	// Determine styling based on info type
+	var infoTypeLabel string
+	var infoTypeStyle lipgloss.Style
+	var messageStyle lipgloss.Style
+	var messageFg lipgloss.Color
+
 	switch m.info.Type {
 	case InfoTypeError:
-		infoType = t.S().Base.Background(t.Red).Padding(0, 1).Render("ERROR")
-		widthLeft := m.width - (lipgloss.Width(infoType) + 2)
-		info := ansi.Truncate(m.info.Msg, widthLeft, "…")
-		message = t.S().Base.Background(t.Error).Width(widthLeft+2).Foreground(t.White).Padding(0, 1).Render(info)
+		infoTypeLabel = "ERROR"
+		infoTypeStyle = t.S().Base.Background(t.Red).Padding(0, 1)
+		messageStyle = t.S().Base.Background(t.Error).Padding(0, 1)
+		messageFg = t.White
 	case InfoTypeWarn:
-		infoType = t.S().Base.Foreground(t.BgOverlay).Background(t.Yellow).Padding(0, 1).Render("WARNING")
-		widthLeft := m.width - (lipgloss.Width(infoType) + 2)
-		info := ansi.Truncate(m.info.Msg, widthLeft, "…")
-		message = t.S().Base.Foreground(t.BgOverlay).Width(widthLeft+2).Background(t.Warning).Padding(0, 1).Render(info)
+		infoTypeLabel = "WARNING"
+		infoTypeStyle = t.S().Base.Foreground(t.BgOverlay).Background(t.Yellow).Padding(0, 1)
+		messageStyle = t.S().Base.Foreground(t.BgOverlay).Background(t.Warning).Padding(0, 1)
 	default:
-		note := "OKAY!"
 		if m.info.Type == InfoTypeUpdate {
-			note = "HEY!"
+			infoTypeLabel = "HEY!"
+		} else {
+			infoTypeLabel = "OKAY!"
 		}
-		infoType = t.S().Base.Foreground(t.BgSubtle).Background(t.Green).Padding(0, 1).Bold(true).Render(note)
-		widthLeft := m.width - (lipgloss.Width(infoType) + 2)
-		info := ansi.Truncate(m.info.Msg, widthLeft, "…")
-		message = t.S().Base.Background(t.GreenDark).Width(widthLeft+2).Foreground(t.BgOverlay).Padding(0, 1).Render(info)
+		infoTypeStyle = t.S().Base.Foreground(t.BgSubtle).Background(t.Green).Padding(0, 1).Bold(true)
+		messageStyle = t.S().Base.Background(t.GreenDark).Padding(0, 1)
+		messageFg = t.BgOverlay
 	}
+
+	// Render info type label
+	infoType := infoTypeStyle.Render(infoTypeLabel)
+
+	// Calculate available width and truncate message
+	widthLeft := m.width - (lipgloss.Width(infoType) + 2)
+	info := ansi.Truncate(m.info.Msg, widthLeft, "…")
+
+	// Render message with calculated width
+	if messageFg != "" {
+		messageStyle = messageStyle.Foreground(messageFg)
+	}
+	message := messageStyle.Width(widthLeft + 2).Render(info)
+
 	return ansi.Truncate(infoType+message, m.width, "…")
 }
