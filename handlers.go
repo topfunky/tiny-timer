@@ -49,12 +49,16 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(tickCmd(), cmd)
 	}
 
-	percentCompleted := float64(elapsed) / float64(m.targetDuration)
+	// Calculate completion for further evaluation
+	//
+	// For count down mode (default), fill progress bar
+	// and work backwards as time elapses
+	percentCompleted := float64(m.targetDuration-elapsed) / float64(m.targetDuration)
 
 	// Check for completion based on actual elapsed time
-	if percentCompleted >= 1.0 {
-		// Ensure progress is set to 100% for final display
-		m.progress.SetPercent(1.0)
+	if percentCompleted <= 0.0 {
+		// Ensure progress is set to 0% for final display
+		m.progress.SetPercent(0.0)
 
 		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
 			fmt.Println("Error sending notification:", err)
@@ -67,15 +71,14 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Activate normal progress bar update
 	cmd := m.progress.SetPercent(percentCompleted)
 	return m, tea.Batch(tickCmd(), cmd)
 }
 
 func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.progress.Width = msg.Width - padding*2 - 4
-	if m.progress.Width > maxWidth {
-		m.progress.Width = maxWidth
-	}
+	m.progress.Width = min(m.progress.Width, maxWidth)
 	m.help.Width = msg.Width
 	return m, nil
 }
@@ -129,23 +132,24 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 
 // handlePromptKeyInput handles key input when prompt is active
 func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyEnter {
+	switch msg.Type {
+	case tea.KeyEnter:
 		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == promptLogAndReset})
-	} else if msg.Type == tea.KeyEsc {
+	case tea.KeyEsc:
 		m.promptActive = false
 		return m, nil
-	} else if msg.Type == tea.KeyBackspace {
+	case tea.KeyBackspace:
 		if len(m.inputBuffer) > 0 {
 			m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
 		}
 		return m, nil
-	} else if msg.Type == tea.KeySpace {
+	case tea.KeySpace:
 		// Only allow space for title prompts, not duration
 		if m.promptType != promptSetDuration {
 			m.inputBuffer += " "
 		}
 		return m, nil
-	} else if msg.Type == tea.KeyRunes {
+	case tea.KeyRunes:
 		for _, r := range msg.Runes {
 			// For duration prompts, only allow numeric characters
 			if m.promptType == promptSetDuration {
@@ -162,7 +166,7 @@ func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleTableViewKey handles key input when in table view mode
-func handleTableViewKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTableViewKey(m model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Any key exits table view
 	m.mode = timerView
 	return m, nil
