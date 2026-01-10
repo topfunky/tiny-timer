@@ -87,11 +87,11 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.progress.Width = msg.Width - padding*2 - 4
 	m.progress.Width = min(m.progress.Width, maxWidth)
 	m.help.Width = msg.Width
-	
+
 	// Update status component with window size
 	s, cmd := m.status.Update(msg)
 	m.status = s
-	
+
 	return m, cmd
 }
 
@@ -118,7 +118,7 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, func() tea.Msg {
 				return status.InfoMsg{
 					Type: status.InfoTypeSuccess,
-					Msg:  fmt.Sprintf("Session saved: %s (%d:%02d)", msg.title, elapsed/60, elapsed%60),
+					Msg:  fmt.Sprintf("Saved: %s (%d:%02d)", msg.title, elapsed/60, elapsed%60),
 				}
 			})
 		}
