@@ -14,6 +14,7 @@ install:
 
 # Clean the build
 clean:
+	@rm -f tiny-timer
 	go clean -testcache
 
 # Run tests
