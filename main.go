@@ -18,6 +18,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var version = "dev"
+
 func main() {
 	title, countUp, clean, debug := parseFlags()
 
@@ -50,6 +52,7 @@ func parseFlags() (title string, countUp bool, clean bool, debug bool) {
 	countUpFlag := flag.Bool("count-up", false, "Enable count-up mode (logs task time after completion)")
 	cleanFlag := flag.Bool("clean", false, "Delete the database and exit")
 	debugFlag := flag.Bool("debug", false, "Enable debug logging to debug.log")
+	versionFlag := flag.Bool("version", false, "Print version and exit")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [minutes] [flags]\n\n", os.Args[0])
@@ -62,6 +65,11 @@ func parseFlags() (title string, countUp bool, clean bool, debug bool) {
 
 	preprocessArgs()
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println("tiny-timer version", version)
+		os.Exit(0)
+	}
 
 	return *titleFlag, *countUpFlag, *cleanFlag, *debugFlag
 }
