@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	"tiny-timer/status"
 )
 
 // Top level event handler that is called each time the screen is updated
@@ -31,6 +32,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.progress = progressModel.(progress.Model)
 		return m, cmd
 
+	case status.InfoMsg, status.ClearStatusMsg:
+		// Handle status component updates
+		statusModel, cmd := m.status.Update(msg)
+		m.status = statusModel
+		return m, cmd
+
 	default:
 		return m, nil
 	}
@@ -49,14 +56,18 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(tickCmd(), cmd)
 	}
 
-	percentCompleted := float64(elapsed) / float64(m.targetDuration)
+	// Calculate completion for further evaluation
+	//
+	// For count down mode (default), fill progress bar
+	// and work backwards as time elapses
+	percentCompleted := float64(m.targetDuration-elapsed) / float64(m.targetDuration)
 
 	// Check for completion based on actual elapsed time
-	if percentCompleted >= 1.0 {
-		// Ensure progress is set to 100% for final display
-		m.progress.SetPercent(1.0)
+	if percentCompleted <= 0.0 {
+		// Ensure progress is set to 0% for final display
+		m.progress.SetPercent(0.0)
 
-		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
+		if err := sendNotification("tiny-timer", "Timer has finished"); err != nil {
 			fmt.Println("Error sending notification:", err)
 		}
 
@@ -67,21 +78,26 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Activate normal progress bar update
 	cmd := m.progress.SetPercent(percentCompleted)
 	return m, tea.Batch(tickCmd(), cmd)
 }
 
 func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.progress.Width = msg.Width - padding*2 - 4
-	if m.progress.Width > maxWidth {
-		m.progress.Width = maxWidth
-	}
+	m.progress.Width = min(m.progress.Width, maxWidth)
 	m.help.Width = msg.Width
-	return m, nil
+
+	// Update status component with window size
+	s, cmd := m.status.Update(msg)
+	m.status = s
+
+	return m, cmd
 }
 
 func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	m.promptActive = false
+	var cmds []tea.Cmd
 
 	switch m.promptType {
 	case promptLogAndReset:
@@ -90,7 +106,21 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 		log.Printf("handlePromptInput: Saving session, elapsed=%d, title=%q", elapsed, msg.title)
 		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
 			log.Printf("handlePromptInput: Error saving session: %v", err)
-			fmt.Println("Error saving session to DB:", err)
+			// Show error status
+			cmds = append(cmds, func() tea.Msg {
+				return status.InfoMsg{
+					Type: status.InfoTypeError,
+					Msg:  fmt.Sprintf("Failed to save session: %v", err),
+				}
+			})
+		} else {
+			// Show success status
+			cmds = append(cmds, func() tea.Msg {
+				return status.InfoMsg{
+					Type: status.InfoTypeSuccess,
+					Msg:  fmt.Sprintf("Saved: %s (%d:%02d)", msg.title, elapsed/60, elapsed%60),
+				}
+			})
 		}
 		// Refresh history table if we are logging
 		log.Printf("handlePromptInput: Building table view after save")
@@ -104,7 +134,8 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 		m.startTime = time.Now().Unix()
 		cmd := m.progress.SetPercent(0)
 		m.title = ""
-		return m, tea.Batch(tickCmd(), cmd)
+		cmds = append(cmds, tickCmd(), cmd)
+		return m, tea.Batch(cmds...)
 	case promptEditTitle:
 		// Just update title without logging
 		m.title = msg.title
@@ -129,23 +160,24 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 
 // handlePromptKeyInput handles key input when prompt is active
 func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyEnter {
+	switch msg.Type {
+	case tea.KeyEnter:
 		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == promptLogAndReset})
-	} else if msg.Type == tea.KeyEsc {
+	case tea.KeyEsc:
 		m.promptActive = false
 		return m, nil
-	} else if msg.Type == tea.KeyBackspace {
+	case tea.KeyBackspace:
 		if len(m.inputBuffer) > 0 {
 			m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
 		}
 		return m, nil
-	} else if msg.Type == tea.KeySpace {
+	case tea.KeySpace:
 		// Only allow space for title prompts, not duration
 		if m.promptType != promptSetDuration {
 			m.inputBuffer += " "
 		}
 		return m, nil
-	} else if msg.Type == tea.KeyRunes {
+	case tea.KeyRunes:
 		for _, r := range msg.Runes {
 			// For duration prompts, only allow numeric characters
 			if m.promptType == promptSetDuration {
@@ -162,7 +194,7 @@ func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleTableViewKey handles key input when in table view mode
-func handleTableViewKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTableViewKey(m model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Any key exits table view
 	m.mode = timerView
 	return m, nil

@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
+	"tiny-timer/status"
 )
 
 // newTestModel creates a model with default test values, including help and keys
@@ -50,12 +51,15 @@ func newTestModel() model {
 			key.WithHelp("backspace", "delete"),
 		),
 	}
+	statusCmp := status.NewStatusCmp()
+	statusCmp.SetKeyMap(keys)
 	return model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		help:           newHelpModel(),
 		keys:           keys,
+		status:         statusCmp,
 	}
 }
 

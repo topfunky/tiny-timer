@@ -18,7 +18,7 @@ Enter Sleep 5s
 
 Type "d" Sleep 1s
 Type " and tests" Sleep 3s
-Enter Sleep 5s
+Enter Sleep 6s
 
 Type "h" Sleep 3s
 Enter Sleep 2s
