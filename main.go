@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	"tiny-timer/status"
 )
 
 var version = "dev"
@@ -183,6 +184,9 @@ func createModel(title string, countUp bool, targetDuration int64, keys keyMap) 
 		prog.SetPercent(1.0)
 	}
 
+	statusCmp := status.NewStatusCmp()
+	statusCmp.SetKeyMap(keys)
+
 	return model{
 		progress:       prog,
 		startTime:      time.Now().Unix(),
@@ -191,5 +195,6 @@ func createModel(title string, countUp bool, targetDuration int64, keys keyMap) 
 		countUpMode:    countUp,
 		help:           newHelpModel(),
 		keys:           keys,
+		status:         statusCmp,
 	}
 }

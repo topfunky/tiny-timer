@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	"tiny-timer/status"
 )
 
 // Top level event handler that is called each time the screen is updated
@@ -29,6 +30,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
 		m.progress = progressModel.(progress.Model)
+		return m, cmd
+
+	case status.InfoMsg, status.ClearStatusMsg:
+		// Handle status component updates
+		statusModel, cmd := m.status.Update(msg)
+		m.status = statusModel
 		return m, cmd
 
 	default:
@@ -80,11 +87,17 @@ func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.progress.Width = msg.Width - padding*2 - 4
 	m.progress.Width = min(m.progress.Width, maxWidth)
 	m.help.Width = msg.Width
-	return m, nil
+	
+	// Update status component with window size
+	s, cmd := m.status.Update(msg)
+	m.status = s
+	
+	return m, cmd
 }
 
 func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 	m.promptActive = false
+	var cmds []tea.Cmd
 
 	switch m.promptType {
 	case promptLogAndReset:
@@ -93,7 +106,21 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 		log.Printf("handlePromptInput: Saving session, elapsed=%d, title=%q", elapsed, msg.title)
 		if err := saveSessionToDB(elapsed, true, msg.title); err != nil {
 			log.Printf("handlePromptInput: Error saving session: %v", err)
-			fmt.Println("Error saving session to DB:", err)
+			// Show error status
+			cmds = append(cmds, func() tea.Msg {
+				return status.InfoMsg{
+					Type: status.InfoTypeError,
+					Msg:  fmt.Sprintf("Failed to save session: %v", err),
+				}
+			})
+		} else {
+			// Show success status
+			cmds = append(cmds, func() tea.Msg {
+				return status.InfoMsg{
+					Type: status.InfoTypeSuccess,
+					Msg:  fmt.Sprintf("Session saved: %s (%d:%02d)", msg.title, elapsed/60, elapsed%60),
+				}
+			})
 		}
 		// Refresh history table if we are logging
 		log.Printf("handlePromptInput: Building table view after save")
@@ -107,7 +134,8 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 		m.startTime = time.Now().Unix()
 		cmd := m.progress.SetPercent(0)
 		m.title = ""
-		return m, tea.Batch(tickCmd(), cmd)
+		cmds = append(cmds, tickCmd(), cmd)
+		return m, tea.Batch(cmds...)
 	case promptEditTitle:
 		// Just update title without logging
 		m.title = msg.title

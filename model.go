@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"tiny-timer/status"
 )
 
 type tickMsg time.Time
@@ -82,6 +83,7 @@ type model struct {
 	promptType     promptType
 	help           help.Model
 	keys           keyMap
+	status         *status.StatusCmp
 }
 
 // Start the event loop

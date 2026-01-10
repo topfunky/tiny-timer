@@ -9,15 +9,21 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
+	"tiny-timer/status"
 )
 
 func TestViewWithTitle(t *testing.T) {
 	// Create a model with a title
+	statusCmp := status.NewStatusCmp()
+	statusCmp.SetKeyMap(newTestModel().keys)
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
+		status:         statusCmp,
+		help:           newHelpModel(),
+		keys:           newTestModel().keys,
 	}
 
 	view := m.View()
@@ -28,11 +34,16 @@ func TestViewWithTitle(t *testing.T) {
 
 func TestViewWithoutTitle(t *testing.T) {
 	// Create a model without a title
+	statsuCmp := status.NewStatusCmp()
+	statsuCmp.SetKeyMap(newTestModel().keys)
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "",
+		status:         statsuCmp,
+		help:           newHelpModel(),
+		keys:           newTestModel().keys,
 	}
 
 	view := m.View()
@@ -76,12 +87,17 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create a model and trigger table view
+	statsuCmp := status.NewStatusCmp()
+	statsuCmp.SetKeyMap(newTestModel().keys)
 	m := model{
 		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
 		mode:           timerView,
+		status:         statsuCmp,
+		help:           newHelpModel(),
+		keys:           newTestModel().keys,
 	}
 
 	// Simulate pressing 't' to show table

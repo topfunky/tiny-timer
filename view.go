@@ -67,9 +67,11 @@ func (m model) View() string {
 		tableKeys := tableKeyMap{
 			Quit: m.keys.Quit,
 		}
+		m.status.SetKeyMap(tableKeys)
+		statusView := m.status.View()
 		return "\n" +
 			strings.Join(paddedTable, "\n") + "\n\n" +
-			pad + m.help.View(tableKeys)
+			statusView
 	}
 
 	elapsed := time.Now().Unix() - m.startTime
@@ -92,8 +94,14 @@ func (m model) View() string {
 		titleLine = pad + m.title + "\n\n"
 	}
 
+	// Ensure status component has the full keymap for timer view
+	m.status.SetKeyMap(m.keys)
+	
+	// status.View() handles displaying status messages OR help text
+	statusView := m.status.View()
+
 	return "\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		pad + m.help.View(m.keys)
+		statusView
 }
