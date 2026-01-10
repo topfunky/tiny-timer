@@ -60,7 +60,7 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 		// Ensure progress is set to 0% for final display
 		m.progress.SetPercent(0.0)
 
-		if err := sendNotification("Pomodoro CLI", "Timer has finished"); err != nil {
+		if err := sendNotification("tiny-timer", "Timer has finished"); err != nil {
 			fmt.Println("Error sending notification:", err)
 		}
 
