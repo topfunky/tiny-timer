@@ -14,7 +14,7 @@ Env PATH "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/vhs"
 # Script for recording
 
 Type 'tiny-timer 1 -title "Writing code"' Sleep 1s
-Enter Sleep 5s
+Enter Sleep 7s
 
 Type "d" Sleep 1s
 Type " and tests" Sleep 3s

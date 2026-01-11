@@ -1,4 +1,4 @@
-.PHONY: build install clean test list release-dry-run install-deps
+.PHONY: build install clean test list release-dry-run install-deps vhs
 
 VERSION := $(shell git describe --tags 2>/dev/null || echo "dev")
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
@@ -35,3 +35,6 @@ install-deps:
 release-dry-run:
 	@echo "Running GoReleaser dry-run..."
 	goreleaser release --snapshot --skip-publish --clean
+
+vhs: build
+	docker run --rm -v $(PWD):/vhs ghcr.io/charmbracelet/vhs vhs/basic.tape

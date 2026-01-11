@@ -2,13 +2,15 @@
 
 A simple command-line application to run a [Pomodoro](https://www.pomodorotechnique.com) timer with an animated progress bar using the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
-![Tiny Timer application demo](https://vhs.charm.sh/vhs-Bc93HZoHL5g7S16LmkgB9.gif)
+![Tiny Timer application demo](https://vhs.charm.sh/vhs-3fe8c0RQRBDBwO7ug2US2I.gif)
 
 ## Features
 
 - Animated progress bar
 - Countdown timer (defaults to `25` minutes)
 - Customizable timer duration
+- Can be sent to background with standard `Ctrl-z`
+- Logs completed tasks to local SQLite DB
 
 ## Installation
 
@@ -78,13 +80,13 @@ The following command-line flags are available:
   tiny-timer -count-up -title "Project planning"
   ```
 
-- **`-clean`** - Delete the SQLite database and exit. Useful for resetting your session history.
+- **`-clean`** - Delete the SQLite database (stored at `~/.config/tiny-timer/tiny-timer.db`) and exit. Useful for resetting your session history.
 
   ```bash
   tiny-timer -clean
   ```
 
-- **`-debug`** - Enable debug logging to `debug.log` file. All log output will be written to this file for troubleshooting.
+- **`-debug`** - Enable debug logging to `debug.log` file in the current directory. All log output will be written to this file for troubleshooting.
 
   ```bash
   tiny-timer -debug
