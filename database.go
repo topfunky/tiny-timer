@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
 )
 
 // getDBPath returns the full path to the SQLite database file
@@ -149,6 +149,12 @@ func buildTableView(limit int) (table.Model, error) {
 
 	log.Printf("buildTableView: Created %d row(s) for table", len(rows))
 
+	// Calculate total table width from column widths
+	tableWidth := 0
+	for _, col := range columns {
+		tableWidth += col.Width
+	}
+
 	// Calculate table height: header (1) + data rows + extra padding
 	// Ensure minimum height of 3 to display header + at least 1 row properly
 	tableHeight := max(len(rows)+2, 3)
@@ -157,6 +163,7 @@ func buildTableView(limit int) (table.Model, error) {
 		table.WithRows(rows),
 		table.WithFocused(false),
 		table.WithHeight(tableHeight),
+		table.WithWidth(tableWidth),
 	)
 
 	s := table.DefaultStyles()
@@ -170,6 +177,7 @@ func buildTableView(limit int) (table.Model, error) {
 	s.Cell = s.Cell.
 		Padding(0, 0).
 		Foreground(lipgloss.Color(colorLightGrey))
+	s.Selected = s.Cell // No cursor highlighting for unfocused table
 	t.SetStyles(s)
 
 	log.Printf("buildTableView: Table created with height=%d, rows=%d", t.Height(), len(t.Rows()))

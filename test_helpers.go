@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/progress"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/progress"
+	"charm.land/lipgloss/v2"
 	"tiny-timer/status"
 )
 
@@ -54,7 +55,7 @@ func newTestModel() model {
 	statusCmp := status.NewStatusCmp()
 	statusCmp.SetKeyMap(keys)
 	return model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		help:           newHelpModel(),

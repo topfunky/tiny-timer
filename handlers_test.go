@@ -5,15 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTimerContinuesAfterPause(t *testing.T) {
 	// Test that timer calculates elapsed time correctly even after a simulated pause
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 30, // Started 30 seconds ago
 		targetDuration: 120,                    // 2 minute timer
 		title:          "Test Task",
@@ -43,7 +44,7 @@ func TestResumeAfterCompletion(t *testing.T) {
 
 	// Create a timer that started 70 seconds ago (past the 60 second target)
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 70,
 		targetDuration: 60,
 		title:          "Completed Task",
@@ -81,7 +82,7 @@ func TestTickAfterCompletion(t *testing.T) {
 
 	// Create a timer that started 70 seconds ago (past the 60 second target)
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 70,
 		targetDuration: 60,
 		title:          "Tick After Complete",
@@ -111,7 +112,7 @@ func TestTickAfterCompletion(t *testing.T) {
 
 func TestCtrlZSuspendsInTimerView(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
@@ -119,7 +120,7 @@ func TestCtrlZSuspendsInTimerView(t *testing.T) {
 	}
 
 	// Create a Ctrl-Z key message
-	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	keyMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 
 	// Process the Ctrl-Z key
 	newModel, cmd := m.Update(keyMsg)
@@ -133,7 +134,7 @@ func TestCtrlZSuspendsInTimerView(t *testing.T) {
 
 func TestCtrlZSuspendsInTableView(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
@@ -141,7 +142,7 @@ func TestCtrlZSuspendsInTableView(t *testing.T) {
 	}
 
 	// Create a Ctrl-Z key message
-	keyMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	keyMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 
 	// Process the Ctrl-Z key
 	newModel, cmd := m.Update(keyMsg)
@@ -156,7 +157,7 @@ func TestCtrlZSuspendsInTableView(t *testing.T) {
 
 func TestOtherKeysStillQuitTimerView(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
@@ -164,7 +165,7 @@ func TestOtherKeysStillQuitTimerView(t *testing.T) {
 	}
 
 	// Test that pressing 'q' still quits
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	keyMsg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 
 	// Process the key
 	_, cmd := m.Update(keyMsg)
@@ -175,7 +176,7 @@ func TestOtherKeysStillQuitTimerView(t *testing.T) {
 
 func TestCountUpModeInitialization(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -189,7 +190,7 @@ func TestCountUpModeInitialization(t *testing.T) {
 func TestCountUpModeElapsedTime(t *testing.T) {
 	startTime := time.Now().Unix() - 30
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -202,7 +203,7 @@ func TestCountUpModeElapsedTime(t *testing.T) {
 
 func TestCountUpModeKeysActivatePrompt(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -210,7 +211,7 @@ func TestCountUpModeKeysActivatePrompt(t *testing.T) {
 	}
 
 	// Test 'd' key activates prompt for logging
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	keyMsg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 'd'")
@@ -219,7 +220,7 @@ func TestCountUpModeKeysActivatePrompt(t *testing.T) {
 	// Test 't' key activates prompt for title only
 	m.promptActive = false
 	m.title = "Test Title"
-	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	keyMsg = tea.KeyPressMsg{Code: 't', Text: "t"}
 	newModel, _ = m.Update(keyMsg)
 	modelTyped = newModel.(model)
 	assert.True(t, modelTyped.promptActive, "Expected prompt to be active after pressing 't'")
@@ -228,7 +229,7 @@ func TestCountUpModeKeysActivatePrompt(t *testing.T) {
 
 func TestCountUpModePromptInput(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -239,13 +240,13 @@ func TestCountUpModePromptInput(t *testing.T) {
 	}
 
 	// Test typing characters
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T', 'e', 's', 't'}}
+	keyMsg := tea.KeyPressMsg{Text: "Test"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 	assert.Equal(t, "Test", modelTyped.inputBuffer, "Expected input buffer to accumulate typed characters")
 
 	// Test backspace
-	keyMsg = tea.KeyMsg{Type: tea.KeyBackspace}
+	keyMsg = tea.KeyPressMsg{Code: tea.KeyBackspace}
 	newModel, _ = modelTyped.Update(keyMsg)
 	modelTyped = newModel.(model)
 	assert.Equal(t, "Tes", modelTyped.inputBuffer, "Expected backspace to remove last character")
@@ -257,7 +258,7 @@ func TestCountUpModePromptLogAndReset(t *testing.T) {
 
 	startTime := time.Now().Unix() - 120
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -286,7 +287,7 @@ func TestCountUpModePromptLogAndReset(t *testing.T) {
 
 func TestCountUpModePromptTitleOnly(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 50,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -295,7 +296,7 @@ func TestCountUpModePromptTitleOnly(t *testing.T) {
 	}
 
 	// Test that pressing 't' activates title-only prompt
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	keyMsg := tea.KeyPressMsg{Code: 't', Text: "t"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -305,7 +306,7 @@ func TestCountUpModePromptTitleOnly(t *testing.T) {
 
 	// Now test that input works in prompt mode (appending to pre-filled text)
 	m = modelTyped
-	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'N', 'e', 'w'}}
+	keyMsg = tea.KeyPressMsg{Text: "New"}
 	newModel, _ = m.Update(keyMsg)
 	modelTyped = newModel.(model)
 	assert.Equal(t, "Old TitleNew", modelTyped.inputBuffer, "Expected input buffer to contain pre-filled text plus typed text")
@@ -313,7 +314,7 @@ func TestCountUpModePromptTitleOnly(t *testing.T) {
 
 func TestCountUpModePromptWithSpaces(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 50,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -322,20 +323,20 @@ func TestCountUpModePromptWithSpaces(t *testing.T) {
 	}
 
 	// Activate prompt with 'd' key
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	keyMsg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, _ := m.Update(keyMsg)
 	m = newModel.(model)
 	assert.True(t, m.promptActive, "Expected prompt to be active")
 
 	// Type "Work on " with space
-	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o', 'n', ' ', 't', 'a', 's', 'k'}}
+	keyMsg = tea.KeyPressMsg{Text: "on task"}
 	newModel, _ = m.Update(keyMsg)
 	m = newModel.(model)
 	assert.Equal(t, "Workon task", m.inputBuffer, "Expected input to include space from runes")
 
 	// Also test explicit space key
 	m.inputBuffer = "Test"
-	keyMsg = tea.KeyMsg{Type: tea.KeySpace}
+	keyMsg = tea.KeyPressMsg{Code: tea.KeySpace}
 	newModel, _ = m.Update(keyMsg)
 	m = newModel.(model)
 	assert.Equal(t, "Test ", m.inputBuffer, "Expected KeySpace to add space to input buffer")
@@ -343,7 +344,7 @@ func TestCountUpModePromptWithSpaces(t *testing.T) {
 
 func TestNormalModeSetTitle(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 1500,
 		countUpMode:    false,
@@ -352,7 +353,7 @@ func TestNormalModeSetTitle(t *testing.T) {
 	}
 
 	// Press 't' to activate prompt
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	keyMsg := tea.KeyPressMsg{Code: 't', Text: "t"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -362,7 +363,7 @@ func TestNormalModeSetTitle(t *testing.T) {
 
 	// Simulate typing new title
 	modelTyped.inputBuffer = "New Title"
-	newModel, _ = modelTyped.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = modelTyped.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	modelTyped = newModel.(model)
 
 	assert.Equal(t, "New Title", modelTyped.title, "Expected title to be updated")
@@ -379,7 +380,7 @@ func TestHKeyShowsHistoryInCountdownMode(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 1500,
 		countUpMode:    false,
@@ -387,7 +388,7 @@ func TestHKeyShowsHistoryInCountdownMode(t *testing.T) {
 	}
 
 	// Press 'h' to show history
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	keyMsg := tea.KeyPressMsg{Code: 'h', Text: "h"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -404,7 +405,7 @@ func TestHKeyShowsHistoryInCountUpMode(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -412,7 +413,7 @@ func TestHKeyShowsHistoryInCountUpMode(t *testing.T) {
 	}
 
 	// Press 'h' to show history
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	keyMsg := tea.KeyPressMsg{Code: 'h', Text: "h"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -425,7 +426,7 @@ func TestDKeyMarksDoneInCountdownMode(t *testing.T) {
 
 	startTime := time.Now().Unix() - 120
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 1500,
 		countUpMode:    false,
@@ -434,7 +435,7 @@ func TestDKeyMarksDoneInCountdownMode(t *testing.T) {
 	}
 
 	// Press 'd' to mark done
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	keyMsg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -462,7 +463,7 @@ func TestDKeyMarksDoneInCountUpMode(t *testing.T) {
 
 	startTime := time.Now().Unix() - 120
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -471,7 +472,7 @@ func TestDKeyMarksDoneInCountUpMode(t *testing.T) {
 	}
 
 	// Press 'd' to mark done
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	keyMsg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -495,7 +496,7 @@ func TestDKeyMarksDoneInCountUpMode(t *testing.T) {
 
 func TestTKeyEditsTitleInCountdownMode(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 1500,
 		countUpMode:    false,
@@ -504,7 +505,7 @@ func TestTKeyEditsTitleInCountdownMode(t *testing.T) {
 	}
 
 	// Press 't' to edit title
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	keyMsg := tea.KeyPressMsg{Code: 't', Text: "t"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -522,7 +523,7 @@ func TestTKeyEditsTitleInCountdownMode(t *testing.T) {
 
 func TestTKeyEditsTitleInCountUpMode(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -531,7 +532,7 @@ func TestTKeyEditsTitleInCountUpMode(t *testing.T) {
 	}
 
 	// Press 't' to edit title
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	keyMsg := tea.KeyPressMsg{Code: 't', Text: "t"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -542,7 +543,7 @@ func TestTKeyEditsTitleInCountUpMode(t *testing.T) {
 
 func TestMKeySetsDurationInCountdownMode(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 1500, // 25 minutes
 		countUpMode:    false,
@@ -550,7 +551,7 @@ func TestMKeySetsDurationInCountdownMode(t *testing.T) {
 	}
 
 	// Press 'm' to set duration
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	keyMsg := tea.KeyPressMsg{Code: 'm', Text: "m"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -567,7 +568,7 @@ func TestMKeySetsDurationInCountdownMode(t *testing.T) {
 
 func TestMKeySetsDurationInCountUpMode(t *testing.T) {
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 3600, // 1 hour
 		countUpMode:    true,
@@ -575,7 +576,7 @@ func TestMKeySetsDurationInCountUpMode(t *testing.T) {
 	}
 
 	// Press 'm' to set duration
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	keyMsg := tea.KeyPressMsg{Code: 'm', Text: "m"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -593,7 +594,7 @@ func TestMKeySetsDurationInCountUpMode(t *testing.T) {
 func TestMKeyResetsTimerAfterSettingDuration(t *testing.T) {
 	startTime := time.Now().Unix() - 60
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 1500,
 		countUpMode:    false,
@@ -601,7 +602,7 @@ func TestMKeyResetsTimerAfterSettingDuration(t *testing.T) {
 	}
 
 	// Press 'm' to set duration
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	keyMsg := tea.KeyPressMsg{Code: 'm', Text: "m"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -622,7 +623,7 @@ func TestTimerEndPromptsForTitle(t *testing.T) {
 
 	// Create a timer that is just about to finish
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix() - 61,
 		targetDuration: 60,
 		title:          "Original Title",

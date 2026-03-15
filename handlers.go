@@ -6,15 +6,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
 	"tiny-timer/status"
 )
 
 // Top level event handler that is called each time the screen is updated
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return updateKey(m, msg)
 
 	case tea.WindowSizeMsg:
@@ -29,7 +29,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
-		m.progress = progressModel.(progress.Model)
+		m.progress = progressModel
 		return m, cmd
 
 	case status.InfoMsg, status.ClearStatusMsg:
@@ -84,9 +84,12 @@ func updatePercent(m model) (tea.Model, tea.Cmd) {
 }
 
 func updateWindowSize(m model, msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-	m.progress.Width = msg.Width - padding*2 - 4
-	m.progress.Width = min(m.progress.Width, maxWidth)
-	m.help.Width = msg.Width
+	width := msg.Width - padding*2 - 4
+	if width > maxWidth {
+		width = maxWidth
+	}
+	m.progress.SetWidth(width)
+	m.help.SetWidth(msg.Width)
 
 	// Update status component with window size
 	s, cmd := m.status.Update(msg)
@@ -159,49 +162,50 @@ func handlePromptInput(m model, msg promptMsg) (tea.Model, tea.Cmd) {
 }
 
 // handlePromptKeyInput handles key input when prompt is active
-func handlePromptKeyInput(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEnter:
+func handlePromptKeyInput(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
 		return handlePromptInput(m, promptMsg{title: m.inputBuffer, logDB: m.promptType == promptLogAndReset})
-	case tea.KeyEsc:
+	case "esc":
 		m.promptActive = false
 		return m, nil
-	case tea.KeyBackspace:
+	case "backspace":
 		if len(m.inputBuffer) > 0 {
 			m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
 		}
 		return m, nil
-	case tea.KeySpace:
+	case "space":
 		// Only allow space for title prompts, not duration
 		if m.promptType != promptSetDuration {
 			m.inputBuffer += " "
 		}
 		return m, nil
-	case tea.KeyRunes:
-		for _, r := range msg.Runes {
-			// For duration prompts, only allow numeric characters
-			if m.promptType == promptSetDuration {
-				if r >= '0' && r <= '9' {
+	default:
+		if len(msg.Text) > 0 {
+			for _, r := range msg.Text {
+				// For duration prompts, only allow numeric characters
+				if m.promptType == promptSetDuration {
+					if r >= '0' && r <= '9' {
+						m.inputBuffer += string(r)
+					}
+				} else {
 					m.inputBuffer += string(r)
 				}
-			} else {
-				m.inputBuffer += string(r)
 			}
 		}
 		return m, nil
 	}
-	return m, nil
 }
 
 // handleTableViewKey handles key input when in table view mode
-func handleTableViewKey(m model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTableViewKey(m model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Any key exits table view
 	m.mode = timerView
 	return m, nil
 }
 
 // handleCountUpModeKey handles key input in count-up mode
-func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleCountUpModeKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	switch key {
 	case "d":
@@ -249,7 +253,7 @@ func handleCountUpModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleTimerModeKey handles key input in timer mode (non count-up)
-func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTimerModeKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	switch key {
 	case "d":
@@ -296,9 +300,9 @@ func handleTimerModeKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func updateKey(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func updateKey(m model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Handle Ctrl-Z to suspend in all modes
-	if msg.Type == tea.KeyCtrlZ {
+	if msg.String() == "ctrl+z" {
 		return m, tea.Suspend
 	}
 
