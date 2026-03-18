@@ -4,11 +4,12 @@
 package status
 
 import (
+	"image/color"
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -32,17 +33,17 @@ type ClearStatusMsg struct{}
 
 type Theme struct {
 	Name      string
-	Green     lipgloss.Color
-	GreenDark lipgloss.Color
-	BgSubtle  lipgloss.Color
-	Red       lipgloss.Color
-	Error     lipgloss.Color
-	White     lipgloss.Color
-	Yellow    lipgloss.Color
-	Warning   lipgloss.Color
-	BgOverlay lipgloss.Color
-	Primary   lipgloss.Color
-	Border    lipgloss.Color
+	Green     color.Color
+	GreenDark color.Color
+	BgSubtle  color.Color
+	Red       color.Color
+	Error     color.Color
+	White     color.Color
+	Yellow    color.Color
+	Warning   color.Color
+	BgOverlay color.Color
+	Primary   color.Color
+	Border    color.Color
 }
 
 func NewTheme() *Theme {
@@ -111,7 +112,7 @@ func (m *StatusCmp) Update(msg tea.Msg) (*StatusCmp, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.help.Width = msg.Width - 2
+		m.help.SetWidth(msg.Width - 2)
 		return m, nil
 
 	case InfoMsg:
@@ -143,7 +144,7 @@ func (m *StatusCmp) infoMsg() string {
 	var infoTypeLabel string
 	var infoTypeStyle lipgloss.Style
 	var messageStyle lipgloss.Style
-	var messageFg lipgloss.Color
+	var messageFg color.Color
 
 	switch m.info.Type {
 	case InfoTypeError:
@@ -174,7 +175,7 @@ func (m *StatusCmp) infoMsg() string {
 	info := ansi.Truncate(m.info.Msg, widthLeft, "…")
 
 	// Render message with calculated width
-	if messageFg != "" {
+	if messageFg != nil {
 		messageStyle = messageStyle.Foreground(messageFg)
 	}
 	message := messageStyle.Width(widthLeft + 2).Render(info)

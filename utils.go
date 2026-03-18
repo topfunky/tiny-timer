@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/lipgloss/v2"
 )
 
 // A display helper for formatting the time remaining in the timer

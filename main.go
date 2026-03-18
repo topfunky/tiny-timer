@@ -13,9 +13,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"tiny-timer/status"
 )
 
@@ -177,7 +178,7 @@ func createKeyBindings() keyMap {
 }
 
 func createModel(title string, countUp bool, targetDuration int64, keys keyMap) model {
-	prog := progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage())
+	prog := progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage())
 	if countUp {
 		prog.SetPercent(0)
 	} else {

@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 // promptKeyMap defines keybindings for prompt mode
@@ -40,7 +41,7 @@ func (k tableKeyMap) FullHelp() [][]key.Binding {
 }
 
 // Handler that draws the UI of the application
-func (m model) View() string {
+func (m model) View() tea.View {
 	if m.promptActive {
 		pad := strings.Repeat(" ", padding)
 		var promptText string
@@ -53,7 +54,7 @@ func (m model) View() string {
 			Confirm: m.keys.Confirm,
 			Cancel:  m.keys.Cancel,
 		}
-		return "\n" + pad + promptText + "\n\n" + pad + m.help.View(promptKeys)
+		return tea.NewView("\n" + pad + promptText + "\n\n" + pad + m.help.View(promptKeys))
 	}
 
 	if m.mode == tableView {
@@ -69,9 +70,9 @@ func (m model) View() string {
 		}
 		m.status.SetKeyMap(tableKeys)
 		statusView := m.status.View()
-		return "\n" +
+		return tea.NewView("\n" +
 			strings.Join(paddedTable, "\n") + "\n\n" +
-			statusView
+			statusView)
 	}
 
 	elapsed := time.Now().Unix() - m.startTime
@@ -96,12 +97,12 @@ func (m model) View() string {
 
 	// Ensure status component has the full keymap for timer view
 	m.status.SetKeyMap(m.keys)
-	
+
 	// status.View() handles displaying status messages OR help text
 	statusView := m.status.View()
 
-	return "\n" +
+	return tea.NewView("\n" +
 		titleLine +
 		pad + m.progress.View() + fmt.Sprintf(" %s \n\n", formatDurationAsMMSS(remaining)) +
-		statusView
+		statusView)
 }

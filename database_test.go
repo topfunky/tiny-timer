@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -280,7 +281,7 @@ func TestFirstSaveThenImmediateHistoryRead(t *testing.T) {
 
 	startTime := time.Now().Unix() - 120
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      startTime,
 		targetDuration: 3600,
 		countUpMode:    true,
@@ -289,7 +290,7 @@ func TestFirstSaveThenImmediateHistoryRead(t *testing.T) {
 	}
 
 	// Press 'd' to mark done and activate prompt
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	keyMsg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, _ := m.Update(keyMsg)
 	modelTyped := newModel.(model)
 
@@ -301,7 +302,7 @@ func TestFirstSaveThenImmediateHistoryRead(t *testing.T) {
 	modelTyped = newModel.(model)
 
 	// Immediately press 'h' to show history (this is the bug scenario)
-	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	keyMsg = tea.KeyPressMsg{Code: 'h', Text: "h"}
 	newModel, _ = modelTyped.Update(keyMsg)
 	modelTyped = newModel.(model)
 

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
 	"github.com/stretchr/testify/assert"
 	"tiny-timer/status"
 )
@@ -17,7 +17,7 @@ func TestViewWithTitle(t *testing.T) {
 	statusCmp := status.NewStatusCmp()
 	statusCmp.SetKeyMap(newTestModel().keys)
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
@@ -26,7 +26,7 @@ func TestViewWithTitle(t *testing.T) {
 		keys:           newTestModel().keys,
 	}
 
-	view := m.View()
+	view := m.View().Content
 
 	// Verify that the title is displayed in the view
 	assert.Contains(t, view, "Test Task", "Expected view to contain the title")
@@ -37,7 +37,7 @@ func TestViewWithoutTitle(t *testing.T) {
 	statsuCmp := status.NewStatusCmp()
 	statsuCmp.SetKeyMap(newTestModel().keys)
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "",
@@ -46,7 +46,7 @@ func TestViewWithoutTitle(t *testing.T) {
 		keys:           newTestModel().keys,
 	}
 
-	view := m.View()
+	view := m.View().Content
 
 	// Count the number of lines - should have one fewer line when no title is present
 	lines := strings.Split(view, "\n")
@@ -72,7 +72,7 @@ func TestTableViewMode(t *testing.T) {
 	assert.Equal(t, timerView, m.mode)
 
 	// Verify timer view is displayed with help text
-	view := m.View()
+	view := m.View().Content
 	assert.Contains(t, view, "title")
 	assert.Contains(t, view, "history")
 }
@@ -90,7 +90,7 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 	statsuCmp := status.NewStatusCmp()
 	statsuCmp.SetKeyMap(newTestModel().keys)
 	m := model{
-		progress:       progress.New(progress.WithGradient(colorMontezumaGold, colorCream), progress.WithoutPercentage()),
+		progress:       progress.New(progress.WithColors(lipgloss.Color(colorMontezumaGold), lipgloss.Color(colorCream)), progress.WithoutPercentage()),
 		startTime:      time.Now().Unix(),
 		targetDuration: 60,
 		title:          "Test Task",
@@ -137,6 +137,7 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 		table.WithRows(rows),
 		table.WithFocused(false),
 		table.WithHeight(len(rows)+2), // Add extra height for visibility
+		table.WithWidth(40+10+20),     // Sum of column widths
 	)
 
 	s := table.DefaultStyles()
@@ -148,13 +149,14 @@ func TestTableHeadersAreLeftAligned(t *testing.T) {
 		Padding(0, 0)
 	s.Cell = s.Cell.
 		Padding(0, 0)
+	s.Selected = s.Cell // No cursor highlighting for unfocused table
 	tbl.SetStyles(s)
 
 	m.table = tbl
 	m.mode = tableView
 
 	// Get the rendered view
-	view := m.View()
+	view := m.View().Content
 
 	// Check that headers appear in the output
 	assert.Contains(t, view, "Title", "Table should contain 'Title' header")
@@ -203,7 +205,7 @@ func TestCountUpViewDisplay(t *testing.T) {
 	m.mode = timerView
 	m.title = "My Task"
 
-	view := m.View()
+	view := m.View().Content
 	assert.Contains(t, view, "My Task", "Expected title to be displayed")
 	assert.Contains(t, view, "done", "Expected count-up mode help text")
 	assert.Contains(t, view, "title", "Expected title change help text")
@@ -212,7 +214,7 @@ func TestCountUpViewDisplay(t *testing.T) {
 func TestHelpTextUsesTwoToneGrey(t *testing.T) {
 	// Test that help text renders keys in light grey (#a0a0a0) and descriptions in dark grey (#626262)
 	m := newTestModel()
-	m.help.Width = 80
+	m.help.SetWidth(80)
 
 	// Render test strings with the key and description styles
 	keyStyle := m.help.Styles.ShortKey
